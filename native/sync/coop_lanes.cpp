@@ -461,20 +461,27 @@ void lane_register(UObject* deps, const char* how)
 void lane_release(const char* why)
 {
     auto& b = s.battle;
-    if (b.lane_dep_active) {
-        ue::Call solve(lane_deps(), STR("SolveDependency"));
-        if (solve) solve.set_object(STR("Dependency"), game::save_manager()).invoke();
-        b.lane_dep_active = false;
-    } else if (b.lane_pending) {
-        bump("lane_holds_missed");             // the game never listened: the turn went on; the state is applied late
-    }
-    if (b.lane_pending) {
+    // State cleared BEFORE solving: SolveDependency runs the game on synchronously, which Resets the turn-start counter
+    // (seen in game 2026-11-16): with lane_pending still set, lane_on_deps re-registered a hold nobody released and the
+    // next actor (an enemy) stood still forever.
+    const uint32_t pending = b.lane_pending;
+    const bool had_dep = b.lane_dep_active;
+    b.lane_pending = 0;
+    b.lane_dep_active = false;
+    if (pending) {
         const int ms = static_cast<int>((s.now - b.lane_pending_since) * 1000.0);
         bump_max("lane_wait_max_ms", ms);
-        log().write("lane_released", JsonObj().add("turn", b.lane_pending).add("why", why).add("waited_ms", ms), b.turn);
+        log().write("lane_released", JsonObj().add("turn", pending).add("why", why).add("waited_ms", ms).add("held", had_dep), b.turn);
     }
-    b.lane_pending = 0;
     ui::clear_status("lane_wait");
+    if (had_dep) {
+        b.lane_releasing = true;
+        ue::Call solve(lane_deps(), STR("SolveDependency"));
+        if (solve) solve.set_object(STR("Dependency"), game::save_manager()).invoke();
+        b.lane_releasing = false;
+    } else if (pending) {
+        bump("lane_holds_missed");             // the game never listened: the turn went on; the state is applied late
+    }
 }
 
 // After a merge applied here: the held actor may be an enemy the merge killed (it would act invisible, S0): end its turn.
@@ -590,8 +597,9 @@ void lane_sync_point(UObject** slot)
 void lane_on_deps(UObject* counter, bool is_reset)
 {
     auto& b = s.battle;
-    if (!b.lanes || !b.active || b.ending || counter != lane_deps()) return;
+    if (!b.lanes || !b.active || b.ending || b.lane_releasing || counter != lane_deps()) return;
     if (!b.lane_pending && !b.lane_spectating) return;
+    if (is_reset && b.lane_dep_active) bump("lane_hold_reregistered");   // a Reset dropped ours: registered again below
     if (ue::get_bool(game::battle_manager(), STR("HasActiveCounterAttack"))) return;
     if (is_reset) { lane_register(counter, "reset"); return; }
     if (!b.lane_dep_since_reset) lane_register(counter, "listen");

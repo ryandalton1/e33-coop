@@ -269,6 +269,7 @@ struct Battle {
     double lane_pending_since = 0;
     bool lane_dep_active = false;                          // notre dépendance est inscrite
     bool lane_dep_since_reset = false;                     // inscrite depuis le dernier Reset du compteur
+    bool lane_releasing = false;                           // dans SolveDependency (le jeu repart, Reset réentrant)
     uint32_t lane_merged_turn = 0;                         // hôte : dernier tour fusionné
     uint32_t lane_applied_turn = 0;                        // client : dernier état fusionné appliqué
     std::vector<proto::EnemyState> lane_local_end;         // état ennemi d'ici à la fin du tour (fil des dégâts)
