@@ -33,7 +33,8 @@
       "{run}/recording-fakeclient.jsonl",
       "--timeout",
       "300"
-    ]
+    ],
+    "stop_ok": true
   },
   "expect": {
     "roam_states_rx": ">=100",

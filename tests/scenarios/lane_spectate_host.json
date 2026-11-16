@@ -46,6 +46,7 @@
     "battle_end": "1",
     "lane_spectates": ">=1",
     "lane_defeats_suppressed": ">=1",
-    "lane_merged_results": ">=3"
+    "lane_merged_results": ">=3",
+    "lane_spectator_victories": ">=1"
   }
 }

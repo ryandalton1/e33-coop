@@ -487,6 +487,18 @@ void lane_release(const char* why)
     }
 }
 
+// Every enemy dead after a merge. A team still standing: the game's own check (victory). A spectating team (all heroes
+// down): the check would see the dead heroes first and pick defeat (seen in game 2026-11-16), so victory is forced.
+void lane_victory()
+{
+    if (!local_wiped()) { check_battle_end("merge"); return; }
+    std::string how;
+    bool ok = game::force_battle_end(game::EndVictory, false, how);
+    if (!ok) { std::string how2; ok = game::force_battle_end(game::EndVictory, true, how2); how += " / " + how2; }
+    bump(ok ? "lane_spectator_victories" : "lane_spectator_victory_failures");
+    log().write("lane_spectator_victory", JsonObj().add("ok", ok).add("how", how), s.battle.turn);
+}
+
 // After a merge applied here: the held actor may be an enemy the merge killed (it would act invisible, S0): end its turn.
 void end_turn_if_dead_actor()
 {
@@ -576,7 +588,7 @@ void host_merge(uint32_t turn, bool timed_out)
     log().write("lane_merge", JsonObj().add("results", ms.results).add("kills", ms.kills).add("overkill", ms.overkill)
                                   .add("statuses_added", ms.statuses_added).add("statuses_spent", ms.statuses_spent)
                                   .raw("merged", units_json(merged)), turn);
-    if (every_enemy_dead(merged)) { lane_release("victory"); check_battle_end("merge"); return; }
+    if (every_enemy_dead(merged)) { lane_release("victory"); lane_victory(); return; }
     if (!b.lane_spectating) { lane_release("merged"); end_turn_if_dead_actor(); }
 }
 
@@ -712,7 +724,7 @@ void lane_tick()
                                                            .add("host_kind", static_cast<int>(y.next.kind)).add("host_spot", static_cast<int>(y.next.spot)), y.turn);
                 }
             }
-            if (every_enemy_dead(y.enemies)) { lane_release("victory"); check_battle_end("merge"); return; }
+            if (every_enemy_dead(y.enemies)) { lane_release("victory"); lane_victory(); return; }
             lane_release("synced");
             end_turn_if_dead_actor();
             bump("lane_turns");

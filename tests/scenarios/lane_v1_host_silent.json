@@ -37,7 +37,8 @@
       "{run}/recording-fakeclient.jsonl",
       "--timeout",
       "900"
-    ]
+    ],
+    "stop_ok": true
   },
   "expect": {
     "hashes_compared": "any",
