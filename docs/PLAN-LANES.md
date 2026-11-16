@@ -42,16 +42,15 @@ S2 (party profiles) moves to Phase 4. S5 and S6 (free roam) wait for Phase 5.
 
 1. **Lane mode switch:** a host option `lanes = 1`, sent in `BattleStart`. All replay paths (`controls()`, relays, input lock, intent mirror) short-circuit when it is on.
 2. **Messages:**
-   - `LaneStart{battle, cycle, lane}`
-   - `LaneResult{battle, cycle, lane, player, per-enemy hp/shield/break deltas, kills}`
-   - `EnemyStateSync{battle, cycle, lane, units[] (enemy UnitState + max HP), next actor, hash}`
-   - `EnemyTurn{battle, cycle, enemy spot, target slot}`
+   - `LaneResult{battle, turn, player, per-enemy hp/shield/break deltas, kills}`
+   - `EnemyStateSync{battle, turn, cycle, enemies[] (state + max HP + buffs), next actor, target slot, hash}`
+   - (`LaneStart` and `EnemyTurn` were folded into `EnemyStateSync`: one host message per sync point; done in `09c7929`)
    - `HeroStatus{player, heroes' hp/ap/alive}`
-3. **Battle start:** the host applies the HP multiplier (N players × `hp_mult`, default 3.0) to every enemy and includes it in the first `EnemyStateSync`.
+3. **Battle start:** the host applies the HP multiplier (`hp_mult`, default = number of players, host option 2.5–4.0 for 3 players) to every enemy and includes it in the first `EnemyStateSync`.
 4. **Turn cycle:** fixed lane 1 → 2 → 3, with enemies placed by the host's initiative. At each sync point, the actor is overwritten with the host's next actor: the lane-k hero (or a skip if dead) or the scheduled enemy.
 5. **Sync point:** at the end of each turn, send `LaneResult`; the host merges and broadcasts `EnemyStateSync`; every machine repairs, kills and sets the next actor (S7's hold).
 6. **Defeat:** a wiped player spectates; the fight is lost only when everyone is wiped (host runs D33's defeat flow).
-7. **Fake peer:** `--lanes` mode. On each `LaneStart` it sends a scripted or synthetic `LaneResult` and consumes `EnemyStateSync`.
+7. **Fake peer:** `--lanes` mode. On each `EnemyStateSync` naming a hero lane it sends a scripted or synthetic `LaneResult` and consumes `EnemyStateSync`.
 8. **Counters:** `lane_results_merged`, `lane_timeouts`, `enemy_state_repairs`, `overkill_wasted`, `enemy_skill_mismatch`, `sync_hold_ms`.
 9. **Scenarios:** `lanes_host_2p` (real host + 1 fake client), `lanes_client_2p` (real client + fake host recording), plus a last-enemy merge kill and a timeout.
 
