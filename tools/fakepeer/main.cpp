@@ -48,6 +48,7 @@
 #include "jsonlog.hpp"
 #include "link.hpp"
 #include "messages.hpp"
+#include "lane_merge.hpp"
 #include "recorder.hpp"
 #include "minijson.hpp"
 #include "transport.hpp"
@@ -313,6 +314,16 @@ int run_client(const Args& a, JsonLog& log, Recorder& rec)
     int own_narr_state = 0;   // 0 pas commencée, 1 en cours, 2 finie
     const int stuck_at = static_cast<int>(script["stuck_at_turn"].as_int(0));
     const bool hash_echo = script["hash_echo"].as_bool(true);
+    // Fork E33Lanes, lane combat (BattleStart.lanes != 0). Script: "lanes": {"damage": 500, "delay_s": 0, "silent": false}.
+    // On each TurnStart: a LaneResult for that turn (on hero turns, "damage" to the lowest alive enemy from the last
+    // EnemyStateSync) and a HeroStatus, "delay_s" later; "silent": never (tests the host's timeout).
+    const json::Value& lane_cfg = script["lanes"];
+    const double lane_damage = lane_cfg["damage"].as_number(500);
+    const double lane_delay_s = lane_cfg["delay_s"].as_number(0);
+    const bool lane_silent = lane_cfg["silent"].as_bool(false);
+    bool lane_battle = false;
+    uint32_t lane_bid = 0;
+    std::vector<proto::EnemyState> lane_enemies;
     bool stuck = false;
     const double def_delay_s = script["defense_delay_ms"].as_number(0) / 1000.0;
     const int def_delay_every = std::max<int>(1, static_cast<int>(script["defense_delay_every"].as_int(1)));
@@ -441,10 +452,24 @@ int run_client(const Args& a, JsonLog& log, Recorder& rec)
                 ready_at = no_ready ? -1 : now_s() + script["ready_delay_s"].as_number(0);
                 if (no_ready) ++counts["ready_withheld"];
                 ready_battle = bs->battle_id;
+                lane_battle = bs->lanes != 0;
+                lane_bid = bs->battle_id;
+                lane_enemies.clear();
+                if (lane_battle) ++counts["lane_battles"];
                 if (!bs->world_enemy.empty()) ++counts["world_battles"];
             } else if (auto* ts = std::get_if<proto::TurnStart>(&m)) {
                 enemy_turn[ts->turn] = ts->kind == proto::ActorKind::Enemy;
                 turn_actor[ts->turn] = {ts->kind, ts->index};
+                if (lane_battle && ts->battle_id == lane_bid && !lane_silent) {
+                    proto::LaneResult r{lane_bid, ts->turn, my_id, {}};
+                    if (ts->kind == proto::ActorKind::Hero && lane_damage > 0)
+                        for (auto& e : lane_enemies) if (!e.dead) { r.enemies.push_back({e.spot, -lane_damage, 0, 0, lane_damage >= e.hp}); break; }
+                    const double at = now_s() + lane_delay_s;
+                    later.emplace_back(at, r);
+                    later.emplace_back(at, proto::HeroStatus{lane_bid, ts->turn, my_id, {}});
+                    ++counts["lane_results_sent"];
+                    if (!r.enemies.empty()) ++counts["lane_hits_sent"];
+                }
                 bool my_hero_turn = false;
                 for (auto& o : owners) if (ts->kind == proto::ActorKind::Hero && o.spot == ts->index && o.player_id == my_id) my_hero_turn = true;
                 if (dc.is_object() && !disconnected && counts["disconnects"] == 0 && ts->turn >= static_cast<uint32_t>(dc["at_turn"].as_int(3)) &&
@@ -686,6 +711,15 @@ int run_client(const Args& a, JsonLog& log, Recorder& rec)
                         ++counts["turns_lagged"];
                     } else lp->send(*sh);
                 }
+            } else if (auto* ys = std::get_if<proto::EnemyStateSync>(&m)) {
+                ++counts["lane_syncs"];
+                if (proto::lane::hash(ys->enemies) != ys->hash) ++counts["lane_hash_bad"];
+                int dead = 0;
+                for (auto& e : ys->enemies) if (e.dead) ++dead;
+                counts["lane_enemies_dead"] = dead;
+                lane_enemies = ys->enemies;
+            } else if (std::get_if<proto::HeroStatus>(&m)) {
+                ++counts["lane_hero_status"];
             } else if (std::get_if<proto::BattleEnd>(&m)) {
                 ++counts["battle_ends"];
                 if (!session) {

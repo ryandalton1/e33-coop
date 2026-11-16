@@ -39,6 +39,8 @@ Done as one rename of `E33Coop`/`e33coop`/`E33 Coop` across `native/` (except `t
 - `lua/LaneProbe`: the one-PC viability probe (see `SPIKES.md`, S0). Dev tool only, not packaged.
 - `native/sync/spike_s7.{hpp,cpp}` and `tests/scenarios/s7_*.json`: spike S7 (hold before the next actor), off unless `-e33s7=<mode>`. `coop::add_counter` lets modules outside coop report counters to the test runner.
 - Protocol v7 lane messages (`LaneResult`, `EnemyStateSync`, `HeroStatus`, `BattleStart.lanes/hp_mult`).
+- Lane combat v1: `native/protocol/lane_merge.*` (pure merge, unit test `tools/tests/test_lane.cpp`), `native/sync/coop_lanes.cpp`, `native/hooks/statmap.*`, fake client `"lanes"` script block, `tests/scenarios/lane_v1_*.json` + `fakeclient_lanes*.json`.
+- Upstream files touched for lanes (small hooks, all marked "fork"): `coop.cpp` (`controls()`, `send_to` filter, options, `handle_battle_common`, client `BattleStart`), `coop_turns.cpp` (host and client turn start), `coop_hooks.cpp` (`StartCharacterTurn` pre), `coop_internal.hpp` (fields, declarations), `.github/workflows/build.yml` (error annotations).
 - `docs/FORK.md`, `docs/DECISIONS-FORK.md`, `docs/SPIKES.md` (English).
 
 ## CI secrets

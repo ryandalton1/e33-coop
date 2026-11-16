@@ -54,6 +54,12 @@ S2 (party profiles) moves to Phase 4. S5 and S6 (free roam) wait for Phase 5.
 8. **Counters:** `lane_results_merged`, `lane_timeouts`, `enemy_state_repairs`, `overkill_wasted`, `enemy_skill_mismatch`, `sync_hold_ms`.
 9. **Scenarios:** `lanes_host_2p` (real host + 1 fake client), `lanes_client_2p` (real client + fake host recording), plus a last-enemy merge kill and a timeout.
 
+**Status (2026-11-16, commits `b9d6d92`, `15a8cf1` and the scenarios commit):**
+- Done (untested in game): items 1, 2, 3 (both sides scale on turn 1; the host's sync carries absolute HP), 5 (blocking hold for now, `lane_hold()` in `coop_lanes.cpp` is where S7's winner goes), 7 (fake client `"lanes"` script block, not a flag), 8 (as `lane_*` counters), 9 for the host side (`lane_v1_host`, `_slow`, `_silent`).
+- Item 4 simplified for v1: parties are copies of the host's, so every machine's own initiative gives the same order; the client only follows the host's `next` when they differ (`lane_actor_mismatch`). The fixed lane cycle comes with Phase 4's own parties.
+- Open: item 6 (defeat/spectate), the client-side scenario (needs a fake host that merges), the last-enemy merge kill (S1), F2's dead picked actor (counted as `lane_dead_actor_picked`, fixed by S7), damage-over-time on enemies during enemy turns counted once per player.
+- Merge rule: `native/protocol/lane_merge.cpp`, unit-tested in CI (`tools/tests/test_lane.cpp`).
+
 **Exit (brief):** 10 consecutive normal fights with no persistent enemy-hash mismatch; fight length measured against solo. Then one real 2-PC session.
 
 ### Phase 4: lane combat full

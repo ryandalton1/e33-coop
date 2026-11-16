@@ -1,0 +1,11 @@
+{
+  "player_name": "FakeLane",
+  "game_build": 23765773,
+  "mod_version": "current",
+  "gameplay_mods": [],
+  "action_type": 1,
+  "combo_hits": 0,
+  "defense": ["fail"],
+  "lanes": { "damage": 400, "delay_s": 0 },
+  "expect": { "lane_battles": ">=1", "lane_results_sent": ">=4", "lane_hits_sent": ">=1", "lane_syncs": ">=4", "lane_hash_bad": "0" }
+}
