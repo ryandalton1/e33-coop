@@ -9,7 +9,7 @@
   "action_delay_s": 1.0,
   "combo_auto_success": 10,
   "actions": [ { "type": "attack", "target": 0 } ],
-  "defense": ["fail"],
+  "defense": ["parry"],
   "launch_args": ["-e33role=host", "-e33port=7777", "-e33lanes=1", "-e33lanehp=2", "-e33seed=16250036901998647475"],
   "fakepeer": { "start": "after_game", "args": ["client", "--connect", "127.0.0.1:7777", "--script", "{repo}/tests/scenarios/fakeclient_lanes_silent.json", "--record", "{run}/recording-fakeclient.jsonl", "--timeout", "900"] },
   "expect": { "battle_end": "any", "lane_result_timeouts": ">=1", "lane_merged_results": "0" }
