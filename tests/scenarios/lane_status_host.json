@@ -1,0 +1,52 @@
+{
+  "name": "lane_status_host",
+  "description": "Lanes, shared statuses: the fake client's hits also apply Burn (BP_BattleBuff_Burn_C, 1 stack, 3 turns). The host merges it into its enemy (lane_statuses_added) and the game applies it (lane_status_repairs, merged buffs > 0 in lane_merge). Screenshots show the Burn icon.",
+  "save": "e33lanes-test/TEST_B",
+  "encounter": "SM_Lancelier_Alpha",
+  "timeout_s": 900,
+  "wait_players": 1,
+  "max_turns": 80,
+  "action_delay_s": 1.0,
+  "combo_auto_success": 10,
+  "actions": [
+    {
+      "type": "attack",
+      "target": 0
+    }
+  ],
+  "defense": [
+    "parry"
+  ],
+  "launch_args": [
+    "-e33role=host",
+    "-e33port=7777",
+    "-e33lanes=1",
+    "-e33lanehp=2",
+    "-e33seed=16250036901998647475"
+  ],
+  "fakepeer": {
+    "start": "after_game",
+    "args": [
+      "client",
+      "--connect",
+      "127.0.0.1:7777",
+      "--script",
+      "{repo}/tests/scenarios/fakeclient_lanes_status.json",
+      "--record",
+      "{run}/recording-fakeclient.jsonl",
+      "--timeout",
+      "900"
+    ]
+  },
+  "expect": {
+    "hashes_compared": "any",
+    "lane_desyncs": "0",
+    "battle_end": "any",
+    "min_player_turns": 3,
+    "lane_turns": ">=4",
+    "lane_statuses_added": ">=1",
+    "lane_status_repairs": ">=1",
+    "lane_apply_failures": "0"
+  },
+  "shots_every_s": 3
+}

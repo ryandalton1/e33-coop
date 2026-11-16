@@ -324,6 +324,13 @@ int run_client(const Args& a, JsonLog& log, Recorder& rec)
     // "drive_s": no TurnStart from the host for that long (its team is down, it spectates, held): keep playing our own
     // turns, one result (with damage) every drive_s, so the fight can still be won (tests spectate-until-victory).
     const double lane_drive_s = lane_cfg["drive_s"].as_number(0);
+    // "statuses": [{"cls": "BP_BattleBuff_Burn_C", "stacks": 1, "turns": 3}, ...]: applied with each hit (statuses this
+    // player put on the enemy; the host merges them into everyone's enemy, lane_statuses_added).
+    std::vector<proto::BuffState> lane_statuses;
+    for (size_t i = 0; i < lane_cfg["statuses"].size(); ++i) {
+        const json::Value& b = lane_cfg["statuses"][i];
+        lane_statuses.push_back({b["cls"].as_string(""), static_cast<int32_t>(b["stacks"].as_int(1)), static_cast<int32_t>(b["turns"].as_int(3)), false});
+    }
     uint32_t lane_last_turn = 0;
     double lane_last_ts_at = 0, lane_drive_next = 0;
     bool lane_battle = false;
@@ -478,7 +485,7 @@ int run_client(const Args& a, JsonLog& log, Recorder& rec)
                 if (lane_battle && ts->battle_id == lane_bid && !lane_silent) {
                     proto::LaneResult r{lane_bid, ts->turn, my_id, {}};
                     if (ts->kind == proto::ActorKind::Hero && lane_damage > 0)
-                        for (auto& e : lane_enemies) if (!e.dead) { r.enemies.push_back({e.spot, -lane_damage, 0, 0, lane_damage >= e.hp}); break; }
+                        for (auto& e : lane_enemies) if (!e.dead) { r.enemies.push_back({e.spot, -lane_damage, 0, 0, lane_damage >= e.hp, lane_statuses, {}}); break; }
                     const double at = now_s() + lane_delay_s;
                     later.emplace_back(at, r);
                     later.emplace_back(at, proto::HeroStatus{lane_bid, ts->turn, my_id, {}});
@@ -832,7 +839,7 @@ int run_client(const Args& a, JsonLog& log, Recorder& rec)
         if (lane_battle && lane_drive_s > 0 && !lane_silent && !ended && lane_last_turn > 0 && now_s() - lane_last_ts_at > lane_drive_s &&
             now_s() >= lane_drive_next) {
             proto::LaneResult r{lane_bid, ++lane_last_turn, my_id, {}};
-            for (auto& e : lane_enemies) if (!e.dead) { r.enemies.push_back({e.spot, -lane_damage, 0, 0, lane_damage >= e.hp}); break; }
+            for (auto& e : lane_enemies) if (!e.dead) { r.enemies.push_back({e.spot, -lane_damage, 0, 0, lane_damage >= e.hp, lane_statuses, {}}); break; }
             lp->send(r);
             lp->send(proto::HeroStatus{lane_bid, lane_last_turn, my_id, {}});
             lane_drive_next = now_s() + lane_drive_s;

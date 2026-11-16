@@ -1,0 +1,30 @@
+{
+  "player_name": "FakeLaneStatus",
+  "game_build": 23765773,
+  "mod_version": "current",
+  "gameplay_mods": [],
+  "action_type": 1,
+  "combo_hits": 0,
+  "defense": [
+    "fail"
+  ],
+  "lanes": {
+    "damage": 300,
+    "delay_s": 0,
+    "statuses": [
+      {
+        "cls": "BP_BattleBuff_Burn_C",
+        "stacks": 1,
+        "turns": 3
+      }
+    ]
+  },
+  "expect": {
+    "lane_battles": ">=1",
+    "lane_results_sent": ">=4",
+    "lane_hits_sent": ">=1",
+    "lane_syncs": ">=4",
+    "lane_hash_bad": "0",
+    "session_lanes": ">=1"
+  }
+}
