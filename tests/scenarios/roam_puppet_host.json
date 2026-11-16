@@ -1,0 +1,14 @@
+{
+  "name": "roam_puppet_host",
+  "description": "Free roam (fork E33Lanes, spike S5): real host in exploration with -e33freeroam=1; the fake client walks circles of 3 m around where the host stands. The host must spawn a puppet for it and move it (roam_puppets_spawned, no spawn failure). Screenshots every 2 s show whether it is drawn and animated.",
+  "save": "e33lanes-test/TEST_B",
+  "timeout_s": 300,
+  "shots_every_s": 2,
+  "explore": [
+    { "do": "wait", "until": "roam_states_rx", "is": ">=40", "timeout": 120 },
+    { "do": "wait", "s": 20 }
+  ],
+  "launch_args": ["-e33role=host", "-e33port=7777", "-e33freeroam=1"],
+  "fakepeer": { "start": "after_game", "args": ["client", "--connect", "127.0.0.1:7777", "--script", "{repo}/tests/scenarios/fakeclient_roam.json", "--record", "{run}/recording-fakeclient.jsonl", "--timeout", "300"] },
+  "expect": { "roam_states_rx": ">=100", "roam_puppets_spawned": ">=1", "roam_puppet_spawn_failures": "0" }
+}

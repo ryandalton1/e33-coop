@@ -27,6 +27,7 @@ void subscribe()
             // 17 s d'écart le 2026-10-24, chacun son combat). Demande à l'hôte de lancer ce combat (D34) :
             // BattleStart sans n° = demande ; l'hôte lance le même ennemi, puis son BattleStart est appliqué ici
             // comme quand notre pion engage en avance.
+            if (explore::roam()) return;   // fork : en exploration libre, la demande part après (StartBattle post, avec la rencontre)
             if (explore::is_pilot() && s.now - s.battle_request_at > 10.0) {
                 proto::BattleStart rq;
                 rq.world_enemy = ue::short_name(ctx.Context);
@@ -46,6 +47,7 @@ void subscribe()
             log().write("coop_world_battle_other_enemy", JsonObj().add("local", enemy).add("host", bs.world_enemy));
             return;
         }
+        if (bs.lanes) profile::apply_for_battle(bs.battle_id);   // fork : nos propres héros (couloirs)
         apply_host_party(bs);
         int size = 0;
         if (auto* e = static_cast<uint8_t*>(ue::param_address(ctx, f, STR("EngagementType"), &size)); e && size == 1 && *e != bs.engage) {
@@ -57,6 +59,22 @@ void subscribe()
     // Hôte : avis précoce dès le lancement d'un combat de la carte (le BattleStart complet ne part qu'au premier tour,
     // après l'animation d'entrée ; le pion suiveur du client touchait l'ennemi ~3 s avant, vu le 2026-10-21).
     bus.post(L"/Game/jRPGTemplate/Blueprints/Basics/BP_jRPG_Enemy_World_Base_Seamless.BP_jRPG_Enemy_World_Base_Seamless_C:StartBattle", [](HookCtx& ctx, UFunction* f) {
+        // Fork, exploration libre : notre pion a engagé un ennemi sans combat de l'hôte en cours : demande à l'hôte (D34),
+        // avec la rencontre (l'hôte peut être dans une autre zone et la lancer par son nom). Nos héros : notre profil.
+        if (s.role == Role::Client && explore::roam() && !s.pending_start && !s.battle.active && s.now - s.battle_request_at > 10.0) {
+            proto::BattleStart rq;
+            rq.world_enemy = ue::short_name(ctx.Context);
+            rq.engage = static_cast<uint8_t>(ue::read_param_int(ctx, f, STR("EngagementType")).value_or(0));
+            std::string enc, gid;
+            int engage = 0;
+            if (game::battle_params(enc, gid, engage)) rq.encounter = enc;
+            rq.party = game::party_names();
+            for (auto& peer : s.peers) send_to(peer, rq);
+            s.battle_request_at = s.now;
+            bump("roam_battle_requests");
+            log().write("roam_battle_request", JsonObj().add("enemy", rq.world_enemy).add("encounter", rq.encounter));
+            return;
+        }
         if (s.role != Role::Host || s.battle.active) return;
         proto::BattleStart n;
         n.battle_id = 0;
@@ -827,6 +845,7 @@ void subscribe()
         // Sans victoire, pas de récompenses : la fin est traitée tout de suite.
         if (result != game::EndVictory) s.battle.end_flow_at = s.now;
         if (result == game::EndDefeat) defeat_arm();
+        lane_on_battle_end(result);   // fork : spectateur si notre équipe est à terre ; profil rendu au retour en exploration
     });
 
     // Défaite (D33). Réponse donnée à une fenêtre de l'écran de défaite (k = 0 « Réessayer / Abandonner », 1 équipe de

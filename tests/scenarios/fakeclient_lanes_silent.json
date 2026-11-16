@@ -5,7 +5,15 @@
   "gameplay_mods": [],
   "action_type": 1,
   "combo_hits": 0,
-  "defense": ["fail"],
-  "lanes": { "silent": true },
-  "expect": { "lane_battles": ">=1", "lane_results_sent": "0" }
+  "defense": [
+    "fail"
+  ],
+  "lanes": {
+    "silent": true
+  },
+  "expect": {
+    "lane_battles": ">=1",
+    "lane_results_sent": "0",
+    "session_lanes": ">=1"
+  }
 }

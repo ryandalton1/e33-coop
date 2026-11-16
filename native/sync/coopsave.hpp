@@ -18,6 +18,8 @@ void tick(double now, bool can_host);   // game thread : menu principal (F10 si 
 
 // La partie chargée vient de l'hôte (instantané, nouvelle partie suivie) : autosave coupée et tenue coupée.
 void mark_coop_game();
+// Fork E33Lanes: the loaded game is a co-op copy (host snapshot or copy), not a solo save (party profile export guard).
+bool is_coop_game();
 // Client : instantané de l'hôte reçu et vérifié -> copie mise à jour avec ces octets.
 void on_host_snapshot(const std::vector<uint8_t>& bytes, const std::string& host_name, const std::string& level);
 // Client : empreinte d'exploration identique à celle de l'hôte, au calme -> copie rafraîchie localement si besoin.

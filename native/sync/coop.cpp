@@ -593,6 +593,7 @@ void handle(Peer& p, proto::Message& m)
             p.wants_join = h->join;
             p.name = h->player_name.empty() ? "Joueur " + std::to_string(p.player_id + 1) : h->player_name;
             send_to(p, proto::Welcome{p.player_id, s.session_id});
+            send_to(p, session_mode());   // fork : couloirs, exploration libre
             explore::on_peer_accepted(p.player_id, h->join);
             send_roster();
             bump("sessions_accepted");
@@ -616,11 +617,14 @@ void handle(Peer& p, proto::Message& m)
         // et le BattleStart partent ensuite comme pour un combat de l'hôte.
         if (auto* rq = std::get_if<proto::BattleStart>(&m); rq && rq->battle_id == 0) {
             std::string why, err;
-            if (p.player_id != explore::pilot()) why = "not_pilot";
-            else if (s.battle.active || game::in_battle()) why = "in_battle";
+            UObject* enemy = nullptr;
+            if (p.player_id != explore::pilot() && !explore::roam()) why = "not_pilot";
+            else if (s.battle.active || game::in_battle()) why = "in_battle";   // exploration libre : premier arrivé, premier servi
             else if (!game::explore_pawn() || game::map_change_in_progress()) why = "not_ready";
-            else if (UObject* enemy = game::find_world_enemy(rq->world_enemy); !enemy) why = "enemy_not_found";
-            else if (!game::start_world_battle(enemy, L"", rq->engage, err)) why = "start_failed: " + err;
+            else if (enemy = game::find_world_enemy(rq->world_enemy); enemy) { if (!game::start_world_battle(enemy, L"", rq->engage, err)) why = "start_failed: " + err; }
+            // Fork, exploration libre : l'hôte est ailleurs (autre zone) : la rencontre est lancée par son nom.
+            else if (explore::roam() && !rq->encounter.empty()) { if (!game::trigger_battle(ue::from_utf8(rq->encounter), party_wide(game::party_names()), err)) why = "trigger_failed: " + err; }
+            else why = "enemy_not_found";
             bump(why.empty() ? "battle_requests_started" : "battle_requests_refused");
             log().write("coop_battle_request_received", JsonObj().add("player", static_cast<int>(p.player_id)).add("enemy", rq->world_enemy)
                                                             .add("engage", static_cast<int>(rq->engage)).add("started", why.empty()).add("why", why));
@@ -996,6 +1000,14 @@ void read_settings()
     s.lanes = arg(L"e33lanes") == L"1";
     if (const std::wstring v = arg(L"e33lanehp"); !v.empty()) s.lane_hp = std::wcstod(v.c_str(), nullptr);
     if (s.lanes) { s.turn_align = false; s.turn_dep = false; s.enemy_done = false; }
+    s.lane_statuses = arg(L"e33lanestatus") != L"0";
+    if (const std::wstring v = arg(L"e33lanemarks"); !v.empty()) {
+        s.lane_marks.clear();
+        std::stringstream ms(ue::to_utf8(v));
+        for (std::string part; std::getline(ms, part, ',');) if (!part.empty()) s.lane_marks.push_back(part);
+    }
+    s.freeroam = arg(L"e33freeroam") == L"1";
+    profile::init();
     s.my_name = ue::to_utf8(arg(L"e33name"));
     s.name_from_arg = !s.my_name.empty();
     ui::init();
@@ -1065,6 +1077,7 @@ void start_session(Role r, const char* why)
     net.name_of = [](uint8_t id) { return player_name(id); };
     net.battle_engaged = [] { return s.pending_start.has_value() || (s.battle.active && !s.battle.finalized); };
     explore::init(r == Role::Host, s.want_join, net);
+    if (r == Role::Host) explore::set_roam(s.freeroam);   // fork ; client : SessionMode de l'hôte
     {
         builds::Net bn;
         bn.publish = [](const proto::Message& m) { publish(m); };

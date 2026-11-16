@@ -37,6 +37,11 @@ bool handle(uint8_t from, const proto::Message& m);       // true si le message 
 void tick(double now);
 void subscribe();
 
+// Fork E33Lanes : exploration libre (chacun son pion, PilotState de tous, pantins des autres). Réglage de l'hôte
+// (-e33freeroam=1), annoncé aux clients par SessionMode.
+void set_roam(bool on);
+bool roam();
+
 bool join_requested();        // client : -e33join=1
 bool joined();                // client : instantané chargé et monde prêt
 int joined_players();         // hôte : clients entrés dans la partie

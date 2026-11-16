@@ -41,6 +41,9 @@ Done as one rename of `E33Coop`/`e33coop`/`E33 Coop` across `native/` (except `t
 - Protocol v7 lane messages (`LaneResult`, `EnemyStateSync`, `HeroStatus`, `BattleStart.lanes/hp_mult`).
 - Lane combat v1: `native/protocol/lane_merge.*` (pure merge, unit test `tools/tests/test_lane.cpp`), `native/sync/coop_lanes.cpp`, `native/hooks/statmap.*`, fake client `"lanes"` script block, `tests/scenarios/lane_v1_*.json` + `fakeclient_lanes*.json`.
 - Upstream files touched for lanes (small hooks, all marked "fork"): `coop.cpp` (`controls()`, `send_to` filter, options, `handle_battle_common`, client `BattleStart`), `coop_turns.cpp` (host and client turn start), `coop_hooks.cpp` (`StartCharacterTurn` pre), `coop_internal.hpp` (fields, declarations), `.github/workflows/build.yml` (error annotations).
+- Phase 4: `native/sync/profile.*` (party profiles), status merge and per-player marks in `lane_merge`, protocol v8 (`EnemyDelta` statuses, `SessionMode`).
+- Phase 5: `native/sync/explore_roam.cpp` (free roam, puppets, travel, gather), fake client `"roam"` block, `tests/scenarios/roam_puppet_host.json`.
+- More upstream files touched (marked "fork"): `explore.cpp`, `explore.hpp`, `explore_internal.hpp`, `explore_follow.cpp` (roam), `coop_remote.cpp` (profile before the battle), `coop_tick.cpp` (profile tick), `coopsave.*` (`is_coop_game`), `ui/ui.cpp` (texts).
 - `docs/FORK.md`, `docs/DECISIONS-FORK.md`, `docs/SPIKES.md` (English).
 
 ## CI secrets

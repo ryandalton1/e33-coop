@@ -324,6 +324,15 @@ int run_client(const Args& a, JsonLog& log, Recorder& rec)
     bool lane_battle = false;
     uint32_t lane_bid = 0;
     std::vector<proto::EnemyState> lane_enemies;
+    // Fork E33Lanes, free roam (SessionMode.freeroam): "roam": {"orbit": 300, "period_s": 8}. Once the host's own PilotState
+    // is known, the fake client walks a circle of "orbit" cm around where the host was, in the host's level, with the
+    // host's pawn class, 20 times a second: the host draws it as a puppet (spike S5).
+    const json::Value& roam_cfg = script["roam"];
+    const double roam_orbit = roam_cfg["orbit"].as_number(300);
+    const double roam_period = std::max(1.0, roam_cfg["period_s"].as_number(8));
+    std::optional<proto::PilotState> roam_anchor;
+    double roam_next = 0;
+    uint32_t roam_seq = 0;
     bool stuck = false;
     const double def_delay_s = script["defense_delay_ms"].as_number(0) / 1000.0;
     const int def_delay_every = std::max<int>(1, static_cast<int>(script["defense_delay_every"].as_int(1)));
@@ -756,6 +765,9 @@ int run_client(const Args& a, JsonLog& log, Recorder& rec)
                     joined_at = now_s();
                     inbound.reset();
                 }
+            } else if (auto* ps = std::get_if<proto::PilotState>(&m); ps && roam_cfg.is_object() && ps->pilot == 0) {
+                if (!roam_anchor || roam_anchor->level != ps->level) { roam_anchor = *ps; ++counts["roam_anchors"]; }
+                ++counts["roam_states_rx"];
             } else if (auto* ps = std::get_if<proto::PilotState>(&m)) {
                 ++counts["pilot_states"];
                 last_host_state = *ps;
@@ -787,9 +799,28 @@ int run_client(const Args& a, JsonLog& log, Recorder& rec)
             } else if (auto* bye = std::get_if<proto::Bye>(&m)) {
                 log.write("bye", JsonObj().add("reason", bye->reason));
                 if (session) { ended = true; ended_at = now_s() - 2.0; }
+            } else if (auto* sm = std::get_if<proto::SessionMode>(&m)) {
+                ++counts["session_modes"];
+                if (sm->lanes) ++counts["session_lanes"];
+                if (sm->freeroam) ++counts["session_freeroam"];
             } else if (auto* p = std::get_if<proto::Ping>(&m)) {
                 lp->send(proto::Pong{p->t_us}, false);
             }
+        }
+        if (roam_cfg.is_object() && roam_anchor && now_s() >= roam_next) {
+            roam_next = now_s() + 0.05;
+            const double a = 2 * 3.14159265358979323846 * std::fmod(now_s(), roam_period) / roam_period;
+            proto::PilotState ps = *roam_anchor;
+            ps.pilot = my_id;
+            ps.seq = ++roam_seq;
+            ps.x = roam_anchor->x + roam_orbit * std::cos(a);
+            ps.y = roam_anchor->y + roam_orbit * std::sin(a);
+            const double speed = 2 * 3.14159265358979323846 * roam_orbit / roam_period;
+            ps.vx = -speed * std::sin(a); ps.vy = speed * std::cos(a); ps.vz = 0;
+            ps.yaw = a * 180.0 / 3.14159265358979323846 + 90.0;
+            ps.t_ms = 1 + static_cast<uint32_t>(std::fmod(now_s() * 1000.0, 4.0e9));
+            lp->send(ps, false);
+            ++counts["roam_states_sent"];
         }
         if (disconnected) continue;   // vient de se déconnecter : plus rien n'est envoyé
         // Envois différés arrivés à échéance, dans l'ordre de programmation.

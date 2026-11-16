@@ -66,6 +66,14 @@ S2 (party profiles) moves to Phase 4. S5 and S6 (free roam) wait for Phase 5.
 
 **Party profiles (S2): each player brings their own heroes and builds. Required for the exit (F5).** 3 players (second fake client, then a 3-PC session); status merge and per-player marks (Sciel Foretell); `LaneIntent` preview; teammate strip and damage feed; spectate; rewards per player. Exit: own parties for all 3 players, and an Act 1 boss cleared by 3 players with no unrepaired desync.
 
+### Phase 5: free roam
+
+Written (untested): `native/sync/explore_roam.cpp` and small hooks in `explore.cpp`, `explore_follow.cpp`, `coop.cpp`, `coop_hooks.cpp`. Host option `-e33freeroam=1`, announced by `SessionMode`. See DECISIONS-FORK F7 for every choice and its check. First test: `roam_puppet_host` (one PC, fake client walking circles).
+
+### Status (2026-11-16): all phases written
+
+Phase 3 and 4 code: `coop_lanes.cpp`, `lane_merge.*`, `profile.*`; Phase 5: `explore_roam.cpp`. Choices and their checks: DECISIONS-FORK F7. Nothing has run in the game yet; the order of testing is below.
+
 ## Order of work
 
 1. Phase 1 CI green (running now).

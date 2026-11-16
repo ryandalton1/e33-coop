@@ -10,7 +10,7 @@ void pilot_tick()
     // Échéance cumulée : avec « maintenant + 50 ms », un envoi partait toutes les 4 images à 60 i/s (~15 par seconde,
     // mesuré le 2026-10-22 : écarts de 60-70 ms à la réception).
     s.next_pilot_send = std::max(s.next_pilot_send + kPilotPeriod, s.now - kPilotPeriod);
-    if (s.host && joined_players() == 0) return;
+    if (s.host && joined_players() == 0 && !(s.roam && !s.peers.empty())) return;   // fork : exploration libre, tout joueur en jeu
     if (!s.host && s.cj != S::ClientJoin::Joined && s.want_join) return;
     UObject* pawn = game::explore_pawn();
     if (!pawn && !game::map_change_in_progress()) mount::pilot_without_pawn(s.now);   // diagnostic : monture ?

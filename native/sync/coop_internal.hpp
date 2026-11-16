@@ -35,6 +35,7 @@
 #include "../net/steam.hpp"
 #include "../net/transport.hpp"
 #include "../protocol/messages.hpp"
+#include "../protocol/lane_merge.hpp"
 #include "../ui/owners_ui.hpp"
 #include "../ui/joinbutton.hpp"
 #include "../ui/ui.hpp"
@@ -43,6 +44,7 @@
 #include "explore.hpp"
 #include "intent.hpp"
 #include "presence.hpp"
+#include "profile.hpp"
 #include "update.hpp"
 #include "state.hpp"
 #include "../remote/remote.hpp"
@@ -259,6 +261,9 @@ struct Battle {
     std::map<uint8_t, proto::HeroStatus> lane_heroes;      // équipe de chaque joueur (affichage)
     uint32_t lane_synced_turn = 0;                         // dernier tour fusionné (point de synchro passé)
     uint32_t lane_cycle = 0;
+    bool lane_statuses = true;                             // fusion des statuts (phase 4)
+    proto::lane::MarkLedger lane_marks;                    // hôte : marques par joueur (Foretell…)
+    std::set<uint8_t> lane_wiped;                          // joueurs dont l'équipe est à terre (spectateurs)
 };
 
 // Tirages de la mise en place d'un combat (D30) : avant le tour 1 (BeginPlay des héros, équipement, effets de début de
@@ -327,6 +332,9 @@ struct State {
     bool enemy_done = true;                                // fin d'action ennemie publiée et utilisée (-e33enemydone=0 : coupé, D36)
     bool lanes = false;                                    // fork : -e33lanes=1, combat en couloirs (hôte ; client : BattleStart)
     double lane_hp = 0;                                    // fork : -e33lanehp=X, multiplicateur des PV (0 = nombre de joueurs)
+    bool lane_statuses = true;                             // fork : -e33lanestatus=0, statuts des ennemis non fusionnés
+    std::vector<std::string> lane_marks = {"Foretell", "Mark"};   // fork : -e33lanemarks=a,b, statuts « à chacun les siens »
+    bool freeroam = false;                                 // fork : -e33freeroam=1, exploration libre (hôte ; client : SessionMode)
     double barrier_battle_since = -1;                      // diagnostic : barrière tenue pendant un combat engagé (depuis)
     bool want_join = false;                                // client : -e33join=1 (rejoindre la partie de l'hôte, D12)
     // Défaite (D33) : seul l'hôte choisit sur l'écran de défaite (« Réessayer » / « Abandonner »), les clients suivent.
@@ -539,6 +547,8 @@ void lane_turn_begin();
 bool lane_handle(Peer& p, proto::Message& m);
 bool lane_drop_tx(const proto::Message& m);
 void lane_sync_point(UObject** slot);
+proto::SessionMode session_mode();
+void lane_on_battle_end(int result);
 void apply_host_party(const proto::BattleStart& bs);
 UObject* timeline_hero(UObject* timeline);
 bool impose_defense(UObject* hero, proto::Defense d, bool jumpable);

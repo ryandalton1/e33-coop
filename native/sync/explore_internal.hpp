@@ -91,6 +91,8 @@ struct Inbound {                                  // client : instantané en cou
 struct S {
     bool host = false;
     bool active = false;
+    bool roam = false;                            // fork E33Lanes : exploration libre (chacun son pion, explore_roam.cpp)
+    bool roam_gather = true;                      // fork : cinématique d'un autre joueur -> on le rejoint (-e33roamgather=0)
     Net net;
     uint8_t me = 0;
     double now = 0;
@@ -511,6 +513,12 @@ void send_world_leaves(uint8_t to, const proto::WorldLeavesRequest& rq);
 void on_world_leaves(const proto::WorldLeaves& wl);
 bool try_world_repair(const std::string& differ, const std::vector<std::string>& parts);
 void world_repair_tick();
+// Fork E33Lanes, exploration libre (explore_roam.cpp)
+void roam_push(const proto::PilotState& p);
+void roam_tick();
+void roam_gather(uint8_t player);
+void roam_peer_left(uint8_t player);
+void roam_reset();
 
 } // namespace e33::explore::detail
 

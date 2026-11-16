@@ -124,6 +124,7 @@ static void neutral_tick(double dt)
     join_button_tick();
     ui::tick(s.now);
     coopsave::tick(s.now, true);
+    profile::tick(s.now, false, coopsave::is_coop_game());   // fork : profil d'équipe exporté depuis une partie solo
     apply_options();
     if (s.session_msg_until >= 0 && s.now > s.session_msg_until) { s.session_msg_until = -1; ui::clear_status("session"); }
 }
@@ -390,6 +391,7 @@ void tick(double dt)
     if (s.battle.active && !s.input_enabled) enforce_input_block();
     if (s.role == Role::Client) start_pending_battle();
     { prof::Scope p("explore"); explore::tick(s.now); }
+    { prof::Scope p("profile"); profile::tick(s.now, s.role != Role::Solo, coopsave::is_coop_game()); }   // fork : avant builds (héros du monde rendus d'abord)
     { prof::Scope p("builds"); builds::tick(s.now); }
     run_remote_action();
     // Aperçu de ce que préparent les joueurs, caméra de la visée libre (envoyée par le propriétaire, rejouée ailleurs).

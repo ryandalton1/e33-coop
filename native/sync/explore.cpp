@@ -142,7 +142,10 @@ void reset()
 {
     // Gardés : suivis par les hooks hors session (cinématique, question en cours).
     mount::reset();
+    roam_reset();
     S fresh;
+    fresh.roam = s.roam;
+    fresh.roam_gather = s.roam_gather;
     fresh.sequence_playing = s.sequence_playing;
     fresh.choice_pending = s.choice_pending;
     s = std::move(fresh);
@@ -212,6 +215,7 @@ void on_peer_left(uint8_t player)
     s.remote_narr_since.erase(player);
     s.remote_pause.erase(player);
     presence::forget(player);
+    roam_peer_left(player);
     if (s.host && s.pilot == player) { set_pilot(0, "pilot left"); s.net.publish(proto::PilotChange{0}, true); }
 }
 
@@ -285,6 +289,14 @@ bool handle(uint8_t from, const proto::Message& m)
         s.net.send_to(from, proto::PilotChange{s.pilot});
         return true;
     }
+    if (auto* p = std::get_if<proto::PilotState>(&m); p && s.roam) {   // fork : exploration libre, chacun publie sa position
+        if (s.host) {
+            if (p->pilot != from) return true;
+            s.net.relay(m, from, false);
+        }
+        if (p->pilot != s.me) roam_push(*p);
+        return true;
+    }
     if (auto* p = std::get_if<proto::PilotState>(&m)) {
         if (s.host) {
             if (p->pilot != s.pilot || p->pilot != from) return true;   // seul le pilote publie sa position
@@ -316,9 +328,16 @@ bool handle(uint8_t from, const proto::Message& m)
     if (!s.host && !sharing() && (std::holds_alternative<proto::WorldInteract>(m) || std::holds_alternative<proto::DialogueChoice>(m) ||
                                   std::holds_alternative<proto::PilotState>(m) || std::holds_alternative<proto::FlagSet>(m)))
         return true;
+    // Fork, exploration libre : l'état du monde vient de tous (drapeaux) ; interactions, choix, changements de niveau et
+    // scènes ne sont plus rejoués (chacun les siens).
+    if (s.roam && (std::holds_alternative<proto::WorldInteract>(m) || std::holds_alternative<proto::DialogueChoice>(m) ||
+                   std::holds_alternative<proto::MapChange>(m) || std::holds_alternative<proto::SceneStart>(m) || std::holds_alternative<proto::SceneSkip>(m))) {
+        bump("roam_replays_ignored");
+        return true;
+    }
     // Drapeau persistant du pilote (D38) : relayé par l'hôte depuis le pilote seulement, comme WorldInteract.
     if (auto* fl = std::get_if<proto::FlagSet>(&m)) {
-        if (s.host) { if (from != s.pilot) return true; s.net.relay(m, from, true); }
+        if (s.host) { if (from != s.pilot && !s.roam) return true; s.net.relay(m, from, true); }
         on_flag_set(*fl);
         return true;
     }
@@ -346,6 +365,12 @@ bool handle(uint8_t from, const proto::Message& m)
     }
     if (auto* ns = std::get_if<proto::NarrativeState>(&m)) {
         if (s.host) { if (ns->player != from) return true; s.net.relay(m, from, true); }
+        // Fork, exploration libre : les dialogues restent ceux de leur joueur (pas de barrière) ; une cinématique de
+        // l'histoire rassemble l'équipe (on rejoint le joueur, puis la barrière synchronise la fin).
+        if (s.roam && ns->player != s.me) {
+            if (ns->kind == proto::NarrativeKind::Dialogue) { bump("roam_dialogues_local"); return true; }
+            if (ns->active && !s.remote_narr[ns->player]) roam_gather(ns->player);
+        }
         if (ns->active && !s.remote_narr[ns->player]) s.remote_narr_since[ns->player] = s.now;
         if (!ns->active && s.remote_narr[ns->player]) { sc.remote_end_at[ns->player] = s.now; s.remote_narr_end[ns->player] = s.now; }
         s.remote_narr[ns->player] = ns->active;
@@ -393,6 +418,7 @@ void tick(double now)
     key_tick();
     if (is_pilot()) { sprint_release(); pilot_tick(); }
     else if (!scene_test_no_follow()) { prof::Scope p("follow"); follow_tick(); }
+    if (s.roam) { prof::Scope p("roam"); roam_tick(); }
     mount::tick(s.now);   // pion fantôme rendu si le suivi s'est arrêté
     follow_stats_flush(false);
     {   // Mouvement en cours (pilote vu d'ici, ou pion local) : pas de rechargement d'instantané (world_resync_tick).
@@ -405,9 +431,9 @@ void tick(double now)
     scene_tick();
     { prof::Scope p("explore_poll"); poll_tick(); }
     world_hash_tick();
-    world_resync_tick();
+    if (!s.roam) world_resync_tick();   // fork : en exploration libre, pas de rechargement d'instantané (les joueurs sont ailleurs)
     flags_tick();
-    if (!s.host) world_repair_tick();
+    if (!s.host && !s.roam) world_repair_tick();
     if (!s.host) perturb_world_tick();
 }
 
@@ -424,7 +450,16 @@ int joined_players()
 
 uint8_t pilot() { return s.pilot; }
 
-bool is_pilot() { return s.pilot == s.me; }
+bool is_pilot() { return s.roam || s.pilot == s.me; }   // fork : en exploration libre, chacun pilote son pion
+void set_roam(bool on)
+{
+    if (s.roam == on) return;
+    s.roam = on;
+    s.roam_gather = cmdline::arg(L"e33roamgather") != L"0";
+    if (!on) roam_reset();
+    log().write("roam_mode", JsonObj().add("on", on));
+}
+bool roam() { return s.roam; }
 
 bool shared() { return sharing(); }
 

@@ -680,6 +680,7 @@ void on_turn_start(UObject* actor)
 // Client : équipe de l'hôte imposée avant un combat (le joueur de l'hôte a pu la changer depuis l'instantané).
 void apply_host_party(const proto::BattleStart& bs)
 {
+    if (bs.lanes && profile::applied()) return;   // fork : couloirs, équipe du profil du joueur (déjà posée)
     if (bs.party.empty() || game::party_names() == bs.party) return;
     std::string err, mine;
     for (auto& n : game::party_names()) mine += (mine.empty() ? "" : ",") + n;

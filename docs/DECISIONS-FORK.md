@@ -48,3 +48,25 @@ Defaults, applied until Ryan answers:
 ## F6: Lane combat plan approved (2026-11-16)
 
 **Decision:** `PLAN-LANES.md` approved by Ryan as written. Work starts with spike S7 (a non-freezing hold before the next actor) and the lane protocol messages.
+
+## F7: Full code written ahead of the spikes; choices made without game tests (2026-11-16)
+
+**Context:** Ryan asked for all the code at once. Everything below compiles in CI but none of it has run in the game. Each item names the counter or scenario that will confirm or refute it.
+
+| Area | Choice | Check |
+| --- | --- | --- |
+| Hold before the next actor | Blocking `wait_for` (frozen frame), one function `lane_hold()` | S7 picks the replacement |
+| Dead actor picked (F2) | Host replaces it with its lowest alive hero; clients follow `next` | `lane_dead_actor_replaced` |
+| Last enemy killed by the merge | `BattleManager.CheckBattleEnd` called on every machine | `lane_battle_end_checks`, S1 |
+| Statuses | Union by class, stacks summed (cap 99), consumptions in player order; applied through upstream's buff repair | `lane_status_repairs`, `lane_statuses_*` |
+| Per-player marks | Classes whose name contains `Foretell` or `Mark` (`-e33lanemarks`) are tracked per player; spending another player's stacks is refused, the host's own over-spend is put back | `lane_marks_refused`, `lane_marks_restored`, unit tests |
+| LaneIntent | Upstream's `IntentPreview` reused; host relays it with `spot = 0x80 + player`; shown as a status line, never mirrored | `lane_intents_shown` |
+| Teammate strip, damage feed | Status line from `HeroStatus`; toast with the teammates' share of the merged damage | `lane_feed_shown` |
+| Spectate | A wiped client's local fight ends (game's defeat screen, local choice); the host stops waiting for it. **Host wipe still ends the fight for everyone** (no way found yet to keep the host's fight alive) | `lane_spectates`, `lane_players_wiped` |
+| Turn order | The host's own initiative decides; clients force their own hero in that slot (lowest alive hero if it is down). The brief's strict lane 1-2-3 cycle is not enforced | `lane_actors_forced`, `lane_slot_fallbacks` |
+| Party profiles | Upstream's character blobs: exported from the first solo game (or Ctrl+F9), applied before each lane battle on clients, progression saved back to the profile after a victory, world characters restored before the builds module looks | `profile_*` counters; needs a real client |
+| Free roam | Everyone pilots; puppets spawned with `BeginDeferredActorSpawnFromClass` from the sender's pawn class, flying mode, moved by teleport each frame, velocity written for the anim graph; flags from anyone; replays off; no snapshot reload; battles requested with the encounter name; cinematics gather, dialogues stay local; Ctrl+F6 travel | `roam_puppet_host` scenario (S5), `roam_*` counters |
+| Rewards | Upstream's host-rolled rewards unchanged; XP goes to the local party (the profile's on clients) | profile progression after a victory |
+
+**Not done:** a fake host that merges (client-side scenario needs a recording from a real lane run), per-enemy status ownership beyond the name filter, 3-player scenario (the runner starts one fake peer), extra-turn effects (counted only through actor mismatches).
+**Revisit if:** any check above fails in the scenarios or the first real session.

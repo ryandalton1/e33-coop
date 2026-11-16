@@ -123,8 +123,76 @@ static void test_hash()
     CHECK(lane::hash(a) == lane::hash(c));
 }
 
+
+static EnemyState with_buffs(EnemyState e, std::vector<BuffState> b) { e.buffs = std::move(b); return e; }
+static int32_t stacks(const EnemyState& e, const char* cls) { int32_t n = 0; for (auto& b : e.buffs) if (b.cls == cls) n += b.stacks; return n; }
+
+// Statuses: a client's burn adds to the host's; a client consuming a status removes it once; spending a missing one is dropped.
+static void test_statuses()
+{
+    const std::vector<EnemyState> base = {with_buffs(enemy(0, 5000, 5000), {{"Burn", 2, 3, false}, {"Weak", 1, 2, false}})};
+    const std::vector<EnemyState> host = {with_buffs(enemy(0, 4000, 5000), {{"Burn", 3, 3, false}, {"Weak", 1, 2, false}})};   // host +1 burn
+    EnemyDelta d{0, -100, 0, 0, false};
+    d.buffs_added = {{"Burn", 2, 4, false}, {"Mark", 1, 0, true}};
+    d.buffs_removed = {"Weak", "Ghost"};
+    lane::MergeStats st;
+    auto m = lane::merge(base, host, {result(1, {d})}, st);
+    CHECK(stacks(at(m, 0), "Burn") == 5);
+    CHECK(stacks(at(m, 0), "Mark") == 1);
+    CHECK(stacks(at(m, 0), "Weak") == 0);
+    CHECK(st.statuses_added == 2 && st.statuses_spent == 1);
+}
+
+static void test_status_deltas()
+{
+    const std::vector<EnemyState> base = {with_buffs(enemy(0, 100, 100), {{"Burn", 2, 3, false}, {"Weak", 1, 2, false}, {"Foretell", 4, 0, true}})};
+    const std::vector<EnemyState> local = {with_buffs(enemy(0, 100, 100), {{"Burn", 5, 3, false}, {"Foretell", 1, 0, true}})};
+    auto d = lane::deltas(base, local);
+    CHECK(d.size() == 1);
+    bool burn = false, foretell = false;
+    for (auto& a : d[0].buffs_added) { if (a.cls == "Burn" && a.stacks == 3) burn = true; if (a.cls == "Foretell" && a.stacks == -3) foretell = true; }
+    CHECK(burn && foretell);
+    CHECK(d[0].buffs_removed.size() == 1 && d[0].buffs_removed[0] == "Weak");
+}
+
+// Per-player marks: P1 applies 3 Foretell, P2 applies 2. P2 tries to spend 4: only its 2 go. The host's game spends 3 it
+// never applied: they are put back.
+static void test_marks()
+{
+    lane::MarkLedger ledger;
+    ledger.owned = {"Foretell"};
+    std::vector<EnemyState> base = {enemy(0, 9000, 9000)};
+    EnemyDelta p1{0, 0, 0, 0, false}; p1.buffs_added = {{"BP_Foretell_C", 3, 0, true}};
+    EnemyDelta p2{0, 0, 0, 0, false}; p2.buffs_added = {{"BP_Foretell_C", 2, 0, true}};
+    lane::MergeStats st;
+    auto m = lane::merge(base, base, {result(1, {p1}), result(2, {p2})}, st, &ledger);
+    CHECK(stacks(at(m, 0), "BP_Foretell_C") == 5);
+    CHECK(ledger.of(0, "BP_Foretell_C", 1) == 3 && ledger.of(0, "BP_Foretell_C", 2) == 2);
+
+    EnemyDelta spend{0, -500, 0, 0, false}; spend.buffs_added = {{"BP_Foretell_C", -4, 0, true}};
+    lane::MergeStats st2;
+    auto m2 = lane::merge(m, m, {result(2, {spend})}, st2, &ledger);
+    CHECK(stacks(at(m2, 0), "BP_Foretell_C") == 3);
+    CHECK(st2.marks_refused == 2 && ledger.of(0, "BP_Foretell_C", 2) == 0);
+
+    std::vector<EnemyState> host = m2;
+    host[0].buffs.clear();                       // the host's own game spent all 3 (P1's)
+    lane::MergeStats st3;
+    auto m3 = lane::merge(m2, host, {}, st3, &ledger);
+    CHECK(stacks(at(m3, 0), "BP_Foretell_C") == 3);
+    CHECK(st3.marks_restored == 3);
+
+    host = m3; host[0].hp = 0; host[0].dead = true;   // enemy dies: its marks are forgotten
+    lane::MergeStats st4;
+    lane::merge(m3, host, {}, st4, &ledger);
+    CHECK(ledger.of(0, "BP_Foretell_C", 1) == 0);
+}
+
 int main()
 {
+    test_statuses();
+    test_status_deltas();
+    test_marks();
     test_sum();
     test_heal_counted_once();
     test_overkill();

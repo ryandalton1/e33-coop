@@ -35,6 +35,8 @@ add_library(${TARGET} SHARED
     ../sync/update.cpp
     ../sync/spike_s7.cpp
     ../sync/coop_lanes.cpp
+    ../sync/profile.cpp
+    ../sync/explore_roam.cpp
     ../protocol/messages.cpp
     ../protocol/lane_merge.cpp
     ../hooks/statmap.cpp

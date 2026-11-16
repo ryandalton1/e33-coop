@@ -22,6 +22,8 @@ static proto::LaneResult lane_result()
 {
     proto::LaneResult x; x.battle_id = 7; x.turn = 5; x.player = 2;
     x.enemies = {{0, -12092.5, -1, 350, true}, {2, 0, 0, 0, false}};
+    x.enemies[1].buffs_added = {{"BP_Buff_Burn_C", 3, 3, false}, {"BP_Buff_Foretell_C", 2, 0, true}};
+    x.enemies[1].buffs_removed = {"BP_Buff_Mark_C"};
     return x;
 }
 static proto::EnemyStateSync enemy_sync()
@@ -105,7 +107,8 @@ static std::vector<proto::Message> samples()
             proto::WorldLeavesRequest{1, {"gold", "inventory2", "flags"}}, proto::WorldLeavesRequest{2, {}},
             proto::WorldLeaves{1, "inventory2", 0xFEDCBA9876543210ull, 0, 2, {{"item:CritChanceOnWeak", "1"}, {"level:Weapon_X", "4"}}},
             proto::WorldLeaves{1, "flags", 7, 1, 2, {{"NID_CuratorTutorial", "1"}}}, proto::WorldLeaves{1, "gold", 0, 0, 1, {}},
-            lane_start(bs), lane_result(), proto::LaneResult{7, 2, 0, {}}, enemy_sync(), enemy_sync_end(), hero_status()};
+            lane_start(bs), lane_result(), proto::LaneResult{7, 2, 0, {}}, enemy_sync(), enemy_sync_end(), hero_status(),
+            proto::SessionMode{1, 1, 2.5}, proto::SessionMode{}};
 }
 
 static void test_roundtrip()
@@ -135,6 +138,9 @@ static void test_invalid_lanes()
     { auto x = enemy_sync(); x.target_slot = 5; CHECK(!decodes(x)); }                 // hero slot out of range
     { auto x = enemy_sync(); x.enemies[0].max_hp = -1; CHECK(!decodes(x)); }          // negative max HP
     { auto x = lane_result(); x.player = 9; CHECK(!decodes(x)); }                     // unknown player
+    { proto::SessionMode x{2, 0, 0}; CHECK(!decodes(x)); }                             // lanes flag out of range
+    { proto::SessionMode x{1, 0, 9.0}; CHECK(!decodes(x)); }                           // HP multiplier out of range
+    { auto x = lane_result(); x.enemies[0].buffs_added.assign(65, {"B", 1, 1, false}); CHECK(!decodes(x)); }   // too many statuses
     { auto x = lane_result(); x.enemies[0].hp = std::nan(""); CHECK(!decodes(x)); }   // non-finite damage
     { auto x = hero_status(); x.player = 4; CHECK(!decodes(x)); }
     { proto::BattleStart bs; bs.lanes = 1; bs.hp_mult = 0.5; CHECK(!decodes(bs)); }   // multiplier below 1

@@ -340,6 +340,8 @@ void tick(double now, bool can_host)
     }
 }
 
+bool is_coop_game() { return s.coop_game || s.hosting; }
+
 void mark_coop_game()
 {
     if (!s.coop_game) log().write("coop_copy_guard_on", JsonObj());

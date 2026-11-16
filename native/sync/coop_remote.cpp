@@ -47,6 +47,7 @@ void start_pending_battle()
     const proto::BattleStart bs = *s.pending_start;
     std::string err;
     bool started = game::in_battle();
+    if (bs.lanes && !started) profile::apply_for_battle(bs.battle_id);   // fork : nos propres héros avant que le combat les crée
     const bool already = started;
     if (started) {
         // Notre pion a déjà engagé un combat (il suit le pilote) : ce doit être le même.
@@ -62,7 +63,7 @@ void start_pending_battle()
         if (!started) log().write("coop_error", JsonObj().add("what", "start_world_battle: " + err));
         else bump("world_battles");
     }
-    if (!started && !game::trigger_battle(ue::from_utf8(bs.encounter), party_wide(bs.party), err)) {
+    if (!started && !game::trigger_battle(ue::from_utf8(bs.encounter), party_wide(profile::battle_party(bs.party)), err)) {
         log().write("coop_error", JsonObj().add("what", "trigger_battle: " + err));
         s.next_trigger_try = s.now + 2.0;
         return;

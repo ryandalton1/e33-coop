@@ -30,7 +30,9 @@ namespace e33::proto {
 //      WorldLeaves), D38 : un pair plus ancien les ignore (pas de miroir de drapeaux ; réparation remplacée par l'instantané).
 // v7 (fork E33Lanes) : combat en couloirs (docs/PLAN-LANES.md) : BattleStart.lanes/hp_mult, LaneResult, EnemyStateSync,
 //      HeroStatus. Le magic du fork diffère de l'amont, donc pas de dialogue croisé quelle que soit la version.
-inline constexpr uint16_t kProtocolVersion = 7;
+// v8 (fork E33Lanes) : EnemyDelta.buffs_added/buffs_removed (fusion des statuts, phase 4), SessionMode (couloirs,
+//      exploration libre, réglages de l'hôte annoncés aux clients).
+inline constexpr uint16_t kProtocolVersion = 8;
 inline constexpr uint32_t kMagic = 0x4C333345; // "E33L" (fork E33Lanes ; amont : 0x43333345 "E33C")
 
 enum class MsgType : uint16_t {
@@ -44,6 +46,7 @@ enum class MsgType : uint16_t {
     BuildOffer = 65, BuildChunk = 66, EconomyDelta = 67, DefeatChoice = 68,
     EnemyActionDone = 70, FlagSet = 72, WorldLeavesRequest = 73, WorldLeaves = 74,
     LaneResult = 80, EnemyStateSync = 81, HeroStatus = 82,   // fork E33Lanes (v7)
+    SessionMode = 84,                                        // fork E33Lanes (v8)
 };
 
 const char* type_name(MsgType t);
@@ -381,7 +384,12 @@ inline constexpr uint8_t kNoSlot = 0xFF;
 inline constexpr uint8_t kMaxLanePlayers = 3;
 // Change of one enemy on the sender's machine during the turn (end state minus the last EnemyStateSync).
 // Negative hp/shield = damage; positive break_bar = break progress.
-struct EnemyDelta { uint8_t spot = 0; double hp = 0; int32_t shield = 0; int64_t break_bar = 0; bool killed = false; };
+struct EnemyDelta {
+    uint8_t spot = 0; double hp = 0; int32_t shield = 0; int64_t break_bar = 0; bool killed = false;
+    // v8: statuses this player applied (stacks gained; turns = the instance's turns) and consumed (class names) this turn.
+    std::vector<BuffState> buffs_added;
+    std::vector<std::string> buffs_removed;
+};
 struct LaneResult {                       // player -> host
     uint32_t battle_id = 0;
     uint32_t turn = 0;
@@ -415,6 +423,9 @@ struct HeroStatus {                       // player -> all (relayed by the host)
     std::vector<HeroBrief> heroes;
 };
 
+// Host -> client after Welcome (and on change): fork modes. lane_hp 0 = one share per player.
+struct SessionMode { uint8_t lanes = 0; uint8_t freeroam = 0; double lane_hp = 0; };
+
 using Message = std::variant<Hello, Welcome, Reject, Bye, Ping, Pong, BattleStart, TurnStart, ActionCommand,
                              DefenseRequest, DefenseResult, StateHash, BattleEnd, Draws, ComboResult, StateSync,
                              BattleRewards, FreeAimEvent,
@@ -422,7 +433,7 @@ using Message = std::variant<Hello, Welcome, Reject, Bye, Ping, Pong, BattleStar
                              WorldInteract, DialogueChoice, MapChange, NarrativeState, BarrierRelease, PauseState,
                              Owners, BattleReady, Roster, WorldHash, ResyncRequest, BuildOffer, BuildChunk, EconomyDelta,
                              IntentPreview, AimView, MenuState, SceneStart, SceneSkip, DefeatChoice, EnemyActionDone,
-                             FlagSet, WorldLeavesRequest, WorldLeaves, LaneResult, EnemyStateSync, HeroStatus>;
+                             FlagSet, WorldLeavesRequest, WorldLeaves, LaneResult, EnemyStateSync, HeroStatus, SessionMode>;
 
 MsgType type_of(const Message& m);
 // Sérialise un message (type u16 + longueur u16 + charge utile).
