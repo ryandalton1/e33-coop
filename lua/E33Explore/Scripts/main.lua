@@ -3,7 +3,17 @@
 -- * à l'apparition du menu principal : dumps UE4SS (objets, usmap, SDK)
 -- * télécommande : RUN_DIR/cmd.lua est exécuté sur le game thread, résultat dans RUN_DIR/cmd.out
 
-local RUN_DIR = os.getenv("E33_RUN_DIR") or "C:/Users/Killian/dev/e33-coop/runs/explore/"
+-- Command folder: E33_RUN_DIR, else run_dir.txt next to this script (written by install-ue4ss.ps1: a game launched by
+-- Steam does not get our environment), else the original author's path.
+local function read_run_dir()
+    local src = debug.getinfo(1, "S").source:gsub("^@", "")
+    local dir = src:match("^(.*[/\\])") or ""
+    local f = io.open(dir .. "run_dir.txt", "r")
+    if not f then return nil end
+    local v = f:read("*l"); f:close()
+    if v and v ~= "" then v = v:gsub("\\", "/"); if not v:match("/$") then v = v .. "/" end; return v end
+end
+local RUN_DIR = os.getenv("E33_RUN_DIR") or read_run_dir() or "C:/Users/Killian/dev/e33-coop/runs/explore/"
 local logf = io.open(RUN_DIR .. "explore.jsonl", "a")
 
 local function esc(s)

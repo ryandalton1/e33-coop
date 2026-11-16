@@ -30,6 +30,9 @@ foreach ($m in $LuaMods) {
     if (Test-Path $md) { Remove-Item $md -Recurse -Force }
     Copy-Item $src $md -Recurse
     Set-Content (Join-Path $md "enabled.txt") "" -Encoding ascii
+    # Remote-control folder for the Lua dev mod (runs\explore in this repo); Steam launches lose our environment.
+    $rd = Join-Path $repo "runs\explore"; New-Item -ItemType Directory -Force $rd | Out-Null
+    Set-Content (Join-Path $md "Scripts\run_dir.txt") $rd -Encoding ascii
 }
 
 # mods.txt : mods par défaut utiles + les nôtres, Keybinds en dernier
