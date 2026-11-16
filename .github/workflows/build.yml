@@ -26,11 +26,11 @@ jobs:
         run: ctest --test-dir build_tools --output-on-failure
       - uses: actions/upload-artifact@v4
         with:
-          name: e33coop-tools
+          name: e33lanes-tools
           path: |
             build_tools/fakepeer.exe
             build_tools/test_protocol.exe
-            build_tools/Installer E33 Coop.exe
+            build_tools/Installer E33 Lanes.exe
           retention-days: 14
 
   mod:
@@ -116,18 +116,18 @@ jobs:
 
       - name: Build
         run: |
-          cmake --build $env:BUILD_DIR --target UE4SS proxy E33Coop
+          cmake --build $env:BUILD_DIR --target UE4SS proxy E33Lanes
 
       - name: Stage
         run: |
           $f = { param($n) Get-ChildItem $env:BUILD_DIR -Recurse -Filter $n | Where-Object FullName -notlike '*_deps*' | Select-Object -First 1 }
-          New-Item -ItemType Directory -Force pkg/ue4ss/Mods/E33Coop/dlls | Out-Null
+          New-Item -ItemType Directory -Force pkg/ue4ss/Mods/E33Lanes/dlls | Out-Null
           Copy-Item (& $f dwmapi.dll).FullName pkg/
           Copy-Item (& $f UE4SS.dll).FullName pkg/ue4ss/
-          Copy-Item (& $f E33Coop.dll).FullName pkg/ue4ss/Mods/E33Coop/dlls/main.dll
-          $pdb = & $f E33Coop.pdb; if ($pdb) { Copy-Item $pdb.FullName pkg/ue4ss/Mods/E33Coop/dlls/main.pdb }
+          Copy-Item (& $f E33Lanes.dll).FullName pkg/ue4ss/Mods/E33Lanes/dlls/main.dll
+          $pdb = & $f E33Lanes.pdb; if ($pdb) { Copy-Item $pdb.FullName pkg/ue4ss/Mods/E33Lanes/dlls/main.pdb }
           $ver = (Get-Content VERSION -Raw).Trim()
-          [IO.File]::WriteAllText("$PWD/pkg/ue4ss/Mods/E33Coop/version.txt", $ver)
+          [IO.File]::WriteAllText("$PWD/pkg/ue4ss/Mods/E33Lanes/version.txt", $ver)
           "version=$ver`nue4ss=$(git -C native/third_party/RE-UE4SS rev-parse HEAD)`nmod=${{ github.sha }}" | Set-Content pkg/build-info.txt
           # commit de cet état de build, pour le prochain build incrémental
           "${{ github.sha }}" | Set-Content (Join-Path $env:BUILD_DIR ".cache_commit")
@@ -135,6 +135,6 @@ jobs:
 
       - uses: actions/upload-artifact@v4
         with:
-          name: e33coop-mod
+          name: e33lanes-mod
           path: pkg/
           retention-days: 14

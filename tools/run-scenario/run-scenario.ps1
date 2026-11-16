@@ -2,7 +2,7 @@
 #   run-scenario.ps1 <nom> [-Package <artefact CI>] [-TimeoutSec 900] [-NoReset]
 # Le scénario est tests\scenarios\<nom>.json. Le jeu est lancé via Steam (-applaunch) avec
 #   -e33test=<scenario> -e33run=<dossier du run>
-# Le mod E33Coop (test runner) écrit <run>\result.json puis ferme le jeu.
+# Le mod E33Lanes (test runner) écrit <run>\result.json puis ferme le jeu.
 param(
     [Parameter(Mandatory = $true, Position = 0)][string]$Name,
     [string]$Package = "",
@@ -24,7 +24,7 @@ Copy-Item $scenario (Join-Path $run "scenario.json")
 function Log($m) { $line = "[{0}] {1}" -f (Get-Date -Format "HH:mm:ss"), $m; Write-Host $line; Add-Content (Join-Path $run "runner.log") $line }
 
 if (-not $NoReset) {
-    # Pas de mod d'exploration pendant les tests : seul E33Coop tourne.
+    # Pas de mod d'exploration pendant les tests : seul E33Lanes tourne.
     & (Join-Path $repo "tools\reset-env\reset-env.ps1") -GameDir $GameDir -Package $Package -LuaMods @() | ForEach-Object { Log $_ }
 } elseif (Get-Process "SandFall-Win64-Shipping" -ErrorAction SilentlyContinue) {
     throw "Le jeu tourne déjà ; relancer sans -NoReset"
@@ -39,7 +39,7 @@ if ($sc.fakepeers) { $peerSpecs = @($sc.fakepeers) } elseif ($sc.fakepeer) { $pe
 $peers = @()
 function Start-FakePeer($spec, [int]$index) {
     $fp = Join-Path $repo ".tools\bin\fakepeer.exe"
-    if (-not (Test-Path $fp)) { throw "fakepeer.exe introuvable : $fp (artefact CI e33coop-tools)" }
+    if (-not (Test-Path $fp)) { throw "fakepeer.exe introuvable : $fp (artefact CI e33lanes-tools)" }
     $tag = if ($index -eq 0) { "fakepeer" } else { "fakepeer$($index + 1)" }
     $peerArgs = @($spec.args | ForEach-Object { $_.Replace("{repo}", $repo).Replace("{run}", $run) }) + @("--log", (Join-Path $run "$tag.jsonl"))
     $quoted = $peerArgs | ForEach-Object { if ($_ -match '\s') { "`"$_`"" } else { $_ } }
@@ -57,7 +57,7 @@ public static class E33Win { [DllImport("user32.dll")] public static extern bool
 # fenêtre bloquée depuis 10 s et aucune classe de jeu chargée (pas de hook /Game/ enregistré) après 45 s.
 function Test-StartupFreeze($game, [double]$elapsed, [ref]$hungSince) {
     if ($elapsed -lt 45 -or $elapsed -gt 150) { return $false }
-    $log = Get-ChildItem $run -Filter "e33coop-*.jsonl" -ErrorAction SilentlyContinue | Select-Object -First 1
+    $log = Get-ChildItem $run -Filter "e33lanes-*.jsonl" -ErrorAction SilentlyContinue | Select-Object -First 1
     if ($log -and (Select-String -Path $log.FullName -Pattern '"path":"/Game/' -SimpleMatch -Quiet)) { return $false }
     $game.Refresh()
     if (-not [E33Win]::IsHungAppWindow($game.MainWindowHandle)) { $hungSince.Value = $null; return $false }

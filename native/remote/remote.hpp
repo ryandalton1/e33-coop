@@ -1,9 +1,9 @@
 // Test à distance (docs/REMOTE-TEST.md) : le développeur, sur le PC de l'hôte, pilote le jeu d'un ami consentant par
 // Steam, sans logiciel de prise en main. Indépendant de la session coop (canal Steam 1, voir remote_proto.hpp) : marche
 // au menu principal, avant, pendant et après une session, et d'une version du mod à l'autre.
-//  - Client (PC de l'ami) : actif si ue4ss/Mods/E33Coop/remotetest.txt désigne un SteamID de confiance (ou
+//  - Client (PC de l'ami) : actif si ue4ss/Mods/E33Lanes/remotetest.txt désigne un SteamID de confiance (ou
 //    -e33remotetest=<id>). N'obéit qu'à ce SteamID et à une liste fermée de commandes. Indicateur à l'écran.
-//  - Hôte (PC du développeur) : actif si le dossier ue4ss/Mods/E33Coop/remote/inbox existe ; lit les commandes déposées
+//  - Hôte (PC du développeur) : actif si le dossier ue4ss/Mods/E33Lanes/remote/inbox existe ; lit les commandes déposées
 //    par tools/remote/remote.ps1, écrit réponses et fichiers reçus dans remote/outbox/<id>/.
 #pragma once
 

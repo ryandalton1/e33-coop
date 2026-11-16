@@ -206,7 +206,7 @@ void on_chunk(const proto::SaveChunk& c)
         in.reset();
         return;
     }
-    const std::filesystem::path dir = std::filesystem::path(game::saves_dir()) / L"e33coop";
+    const std::filesystem::path dir = std::filesystem::path(game::saves_dir()) / L"e33lanes";
     std::error_code ec;
     std::filesystem::create_directories(dir, ec);
     const auto tmp = dir / L"host.tmp", dst = dir / L"host.sav";

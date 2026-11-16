@@ -1,4 +1,4 @@
--- Phase 4 : instantané de l'état courant -> objet de save V8 -> SaveGameToSlot("e33coop/SNAP").
+-- Phase 4 : instantané de l'état courant -> objet de save V8 -> SaveGameToSlot("e33lanes/SNAP").
 local gi = FindFirstOf("BP_jRPG_GI_Custom_C")
 local sm = gi.SaveManager
 local out = {}
@@ -17,7 +17,7 @@ local obj = StaticConstructObject(cls, gi)
 obj:ConvertFromSaveGameData(data)
 r[#r+1] = "obj=" .. obj:GetFullName() .. " ver=" .. tostring(obj.SaveVersion)
 local gps = StaticFindObject("/Script/Engine.Default__GameplayStatics")
-local ok = gps:SaveGameToSlot(obj, "e33coop/SNAP", 0)
+local ok = gps:SaveGameToSlot(obj, "e33lanes/SNAP", 0)
 r[#r+1] = "saved=" .. tostring(ok)
 _G.E33Snap = obj
 local pawn = FindFirstOf("BP_jRPG_Character_World_C")

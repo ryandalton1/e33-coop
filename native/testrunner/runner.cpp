@@ -624,7 +624,7 @@ void apply_setup()
         if (cfg["hp"].is_number()) ue::set_double(st, STR("CurrentHP"), cfg["hp"].as_number());
         if (cfg["shield"].is_number()) {
             ue::Call c(st, STR("SetCurrentShieldPoints"));
-            if (c) c.set_int(STR("NewValue"), cfg["shield"].as_int()).set_string(STR("DebugReason"), STR("E33Coop test setup")).invoke();
+            if (c) c.set_int(STR("NewValue"), cfg["shield"].as_int()).set_string(STR("DebugReason"), STR("E33Lanes test setup")).invoke();
         }
         if (cfg["dead"].as_bool(false)) {
             ue::set_double(st, STR("CurrentHP"), 0);

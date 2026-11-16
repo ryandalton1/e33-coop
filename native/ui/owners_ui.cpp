@@ -38,7 +38,7 @@
 //    portrait WBP_HUD_TurnOrder_Portrait_C : Ally_Box (UOverlay) contient l'image du héros ;
 //  - menu pause : contrôleur.PauseMenuWidget (WBP_PauseMenu_C) .PausePanel (UOverlay, page principale du sélecteur :
 //    caché avec elle quand les paramètres s'ouvrent) ; police copiée de ReturnWrappingText.Text (bouton « Écran titre »).
-// Les widgets créés portent un nom « E33Coop_<Tag>_<n> » : on les retrouve parmi les enfants à chaque passage (aucun
+// Les widgets créés portent un nom « E33Lanes_<Tag>_<n> » : on les retrouve parmi les enfants à chaque passage (aucun
 // pointeur gardé d'un passage à l'autre, donc rien de périmé quand le jeu détruit son HUD).
 // Bouton « Coop » dans la liste du menu pause : écarté (boutons CommonUI liés au graphe BP et à la navigation manette) ;
 // le panneau s'affiche donc de lui-même à droite dès que le menu pause est ouvert.
@@ -103,7 +103,7 @@ UObject* make(const wchar_t* cls_path, UObject* outer, const wchar_t* tag)
     auto* cls = static_cast<UClass*>(ue::find_object(cls_path));
     if (!cls || !outer) return nullptr;
     static int seq = 0;
-    const std::wstring name = std::wstring(L"E33Coop_") + tag + L"_" + std::to_wstring(++seq);   // unique dans l'outer
+    const std::wstring name = std::wstring(L"E33Lanes_") + tag + L"_" + std::to_wstring(++seq);   // unique dans l'outer
     FStaticConstructObjectParameters p{cls, outer};
     p.Name = FName(name.c_str(), FNAME_Add);
     return UObjectGlobals::StaticConstructObject(p);
@@ -239,7 +239,7 @@ UObject* diamond(UObject* outer, float side, const Rgba& c, const std::string& i
     return sb;
 }
 
-// Widgets du mod parmi les enfants d'un panneau (nom « E33Coop_<tag>_… »).
+// Widgets du mod parmi les enfants d'un panneau (nom « E33Lanes_<tag>_… »).
 std::vector<UObject*> ours(UObject* panel, const std::string& prefix)
 {
     std::vector<UObject*> out;
@@ -309,7 +309,7 @@ void tick_badges()
                 want = std::to_string(owner) + ":" + ini;
             }
         bool keep = false;
-        for (UObject* b : ours(box, "E33Coop_Badge")) {
+        for (UObject* b : ours(box, "E33Lanes_Badge")) {
             auto it = g_badge_sig.find(b);
             if (!keep && !want.empty() && it != g_badge_sig.end() && it->second == want) { keep = true; continue; }
             remove_widget(b);
@@ -521,7 +521,7 @@ std::vector<UObject*> menu_buttons(UObject* menu)
 bool nav_alive(UObject* menu)
 {
     if (!g_nav.root || !menu || g_nav.menu != menu) return false;
-    for (UObject* w : ours(ue::get_object(menu, L"PausePanel"), "E33Coop_Pause")) if (w == g_nav.root) return true;
+    for (UObject* w : ours(ue::get_object(menu, L"PausePanel"), "E33Lanes_Pause")) if (w == g_nav.root) return true;
     return false;
 }
 NavRow* nav_row(int index)
@@ -794,7 +794,7 @@ void tick_pause()
 {
     UObject* menu = current_menu();
     UObject* host = ue::get_object(menu, L"PausePanel");
-    const std::vector<UObject*> existing = host ? ours(host, "E33Coop_Pause") : std::vector<UObject*>{};
+    const std::vector<UObject*> existing = host ? ours(host, "E33Lanes_Pause") : std::vector<UObject*>{};
     const bool visible = game::pause_menu_visible();
     if (visible && !host && !g_panel_failed) {
         g_panel_failed = true;
@@ -918,7 +918,7 @@ void tick_pause()
         log().write("owners_ui_error", JsonObj().add("what", "nav buttons").add("built", static_cast<int64_t>(nav_rows.size())));
         return;
     }
-    add_vb(vb, text(outer, std::string("E33 Coop ") + E33COOP_VERSION, kDim, 13, font), 14, 0);   // version installée
+    add_vb(vb, text(outer, std::string("E33 Lanes ") + E33COOP_VERSION, kDim, 13, font), 14, 0);   // version installée
     add_child(bg, L"SetContent", vb);
     add_child(root, L"SetContent", bg);
     // Boutons : la souris doit atteindre les lignes (racine et fond « non testés eux-mêmes »).

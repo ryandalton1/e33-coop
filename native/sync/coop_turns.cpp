@@ -61,7 +61,7 @@ void host_turn_start(UObject* actor)
         {
             std::string enc, gid;
             int engage = 0;
-            if (game::battle_params(enc, gid, engage) && gid != "E33CoopTest") {
+            if (game::battle_params(enc, gid, engage) && gid != "E33LanesTest") {
                 bs.encounter = enc;
                 bs.enemy_global_id = gid;
                 bs.engage = static_cast<uint8_t>(engage);

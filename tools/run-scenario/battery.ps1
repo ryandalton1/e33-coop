@@ -1,5 +1,5 @@
 # Batterie de non-régression (phases 2 à 4) : lance chaque scénario l'un après l'autre et résume.
-#   battery.ps1 -Package <dossier e33coop-mod> [-Only p3_party_host,p3_party_client]
+#   battery.ps1 -Package <dossier e33lanes-mod> [-Only p3_party_host,p3_party_client]
 # Les scénarios *_client rejouent les enregistrements commités (tests/recordings) : ils ne sont pas réécrits.
 param(
     [Parameter(Mandatory = $true)][string]$Package,

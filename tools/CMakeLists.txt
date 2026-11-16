@@ -1,6 +1,6 @@
 # Outils hors jeu : bibliothèque protocole/réseau, faux pair, installateur, tests unitaires. Aucune dépendance UE.
 cmake_minimum_required(VERSION 3.22)
-project(E33CoopTools CXX RC)
+project(E33LanesTools CXX RC)
 
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -30,7 +30,7 @@ target_link_libraries(e33proto PUBLIC ws2_32 shell32 bcrypt)
 add_executable(fakepeer fakepeer/main.cpp)
 target_link_libraries(fakepeer PRIVATE e33proto winmm)
 
-# Installateur / mise à jour / désinstallation pour les joueurs (« Installer E33 Coop.exe »). Icône générée au build.
+# Installateur / mise à jour / désinstallation pour les joueurs (« Installer E33 Lanes.exe »). Icône générée au build.
 add_executable(mkicon installer/mkicon.cpp)
 add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/icon.ico
     COMMAND mkicon ${CMAKE_CURRENT_BINARY_DIR}/icon.ico
@@ -45,7 +45,7 @@ target_compile_definitions(installer PRIVATE UNICODE _UNICODE E33COOP_VERSION_CO
 set_source_files_properties(installer/installer.rc PROPERTIES COMPILE_DEFINITIONS
     "E33COOP_VERSION_STR=\"${E33COOP_VERSION}\";E33COOP_VERSION_COMMAS=${E33COOP_VERSION_COMMAS}")
 target_link_libraries(installer PRIVATE winhttp bcrypt comctl32 shell32 ole32 advapi32 version)
-set_target_properties(installer PROPERTIES OUTPUT_NAME "Installer E33 Coop" MSVC_RUNTIME_LIBRARY "MultiThreaded")
+set_target_properties(installer PROPERTIES OUTPUT_NAME "Installer E33 Lanes" MSVC_RUNTIME_LIBRARY "MultiThreaded")
 if(MSVC)
     target_link_options(installer PRIVATE /MANIFEST:NO)   # manifeste fourni par installer.rc
 endif()

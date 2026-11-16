@@ -379,7 +379,7 @@ UObject* make_text_block(UObject* outer)
     auto* cls = static_cast<UClass*>(ue::find_object(STR("/Script/UMG.TextBlock")));
     if (!cls || !outer) return nullptr;
     static int seq = 0;
-    const std::wstring name = L"E33Coop_Version_" + std::to_wstring(++seq);
+    const std::wstring name = L"E33Lanes_Version_" + std::to_wstring(++seq);
     FStaticConstructObjectParameters p{cls, outer};
     p.Name = FName(name.c_str(), FNAME_Add);
     return UObjectGlobals::StaticConstructObject(p);
@@ -514,7 +514,7 @@ void place_version(UObject* menu)
         if (j) j.set_int(STR("InJustification"), 2).invoke();   // ETextJustify::Right
         g_version = w;
     }
-    set_tb_text(w, std::string("E33 Coop ") + E33COOP_VERSION);   // reposé à chaque passage (Construct peut le remettre)
+    set_tb_text(w, std::string("E33 Lanes ") + E33COOP_VERSION);   // reposé à chaque passage (Construct peut le remettre)
     const bool placed = position_version(panel, anchor, w);
     // Invisible tant que la largeur du numéro est inconnue (sinon il le chevaucherait un instant).
     ue::Call op(w, STR("SetRenderOpacity"));

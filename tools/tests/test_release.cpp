@@ -49,9 +49,9 @@ static void test_hosts()
 static void test_sums()
 {
     const std::string h1(64, 'a'), h2 = "0123456789ABCDEF0123456789abcdef0123456789abcdef0123456789abcdef";
-    const auto m = parse_sha256sums(h1 + "  e33coop-player.zip\r\n" + h2 + " *Installer.E33.Coop.exe\n\nnot a line\n" + std::string(63, 'b') + "  short.zip\n");
+    const auto m = parse_sha256sums(h1 + "  e33lanes-player.zip\r\n" + h2 + " *Installer.E33.Coop.exe\n\nnot a line\n" + std::string(63, 'b') + "  short.zip\n");
     CHECK(m.size() == 2);
-    CHECK(m.count("e33coop-player.zip") && m.at("e33coop-player.zip") == h1);
+    CHECK(m.count("e33lanes-player.zip") && m.at("e33lanes-player.zip") == h1);
     CHECK(m.count("Installer.E33.Coop.exe") && m.at("Installer.E33.Coop.exe") == to_lower(h2));
     CHECK(!m.count("short.zip"));
     CHECK(parse_sha256sums(std::string(64, 'g') + "  x.zip\n").empty());   // pas hexadécimal

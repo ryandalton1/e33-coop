@@ -18,7 +18,7 @@ struct LaunchArgs {
 };
 const LaunchArgs& launch_args();
 
-// Dossier du mod (…/ue4ss/Mods/E33Coop).
+// Dossier du mod (…/ue4ss/Mods/E33Lanes).
 std::wstring mod_dir();
 
 } // namespace e33

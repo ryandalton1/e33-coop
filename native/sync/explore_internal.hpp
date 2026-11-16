@@ -54,9 +54,9 @@ using RC::Unreal::UFunction;
 
 namespace e33::explore::detail {
 
-constexpr const wchar_t* kHostSnapshotSlot = L"e33coop/snapshot";   // hôte : instantané envoyé
+constexpr const wchar_t* kHostSnapshotSlot = L"e33lanes/snapshot";   // hôte : instantané envoyé
 
-constexpr const wchar_t* kCoopSlot = L"e33coop/host";               // client : emplacement coop (jamais ses saves solo)
+constexpr const wchar_t* kCoopSlot = L"e33lanes/host";               // client : emplacement coop (jamais ses saves solo)
 
 constexpr double kPilotPeriod = 0.05;                               // PilotState ~20 par seconde
 

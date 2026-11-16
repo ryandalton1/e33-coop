@@ -183,7 +183,7 @@ bool update_dest_allowed(std::string_view path)
     if (!safe_relative(path)) return false;
     const std::string l = lower(path);   // NTFS ignore la casse
     if (l == "dwmapi.dll" || l == "ue4ss/ue4ss.dll") return true;
-    const std::string mod = "ue4ss/mods/e33coop/";
+    const std::string mod = "ue4ss/mods/e33lanes/";
     if (l.rfind(mod, 0) != 0 || l.size() == mod.size()) return false;
     const std::string rest = l.substr(mod.size());
     if (rest.rfind("remote/", 0) == 0 || rest.rfind("logs/", 0) == 0 || rest == "remotetest.txt" || rest == "remote" || rest == "logs") return false;
@@ -219,9 +219,9 @@ bool validate_scenario(std::string_view text, std::string& sanitized, std::strin
         const size_t slash = sv.find('/');
         const std::string dir = slash == std::string::npos ? "" : sv.substr(0, slash);
         const std::string name = slash == std::string::npos ? "" : sv.substr(slash + 1);
-        const bool ok = (dir == "e33coop" || dir == "e33coop-test") && !name.empty() && name.size() <= 64 &&
+        const bool ok = (dir == "e33lanes" || dir == "e33lanes-test") && !name.empty() && name.size() <= 64 &&
                         std::all_of(name.begin(), name.end(), [](char c) { return std::isalnum(static_cast<unsigned char>(c)) || c == '_' || c == '-'; });
-        if (!s.is_string() || (!sv.empty() && !ok)) { err = "save refusée (seulement e33coop/<nom> ou e33coop-test/<nom>) : " + sv; return false; }
+        if (!s.is_string() || (!sv.empty() && !ok)) { err = "save refusée (seulement e33lanes/<nom> ou e33lanes-test/<nom>) : " + sv; return false; }
     }
     // Étapes d'exploration : seulement celles du runner.
     static const char* steps[] = {"wait", "wait_world", "wait_join", "move", "interact", "choose", "wait_dialogue_end", "change_map", "world_battle",

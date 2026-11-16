@@ -1,5 +1,5 @@
-// E33Coop — mod C++ UE4SS : point d'entrée.
-//  - journal JSON par instance (<run_dir>/e33coop-<instance>.jsonl)
+// E33Lanes — mod C++ UE4SS : point d'entrée.
+//  - journal JSON par instance (<run_dir>/e33lanes-<instance>.jsonl)
 //  - hooks de journalisation du combat (HookBus)
 //  - test runner si -e33test=<scenario.json>
 // Le travail sur les objets du jeu se fait dans le callback EngineTick (game thread).
@@ -61,17 +61,17 @@ void subscribe_logging_hooks()
 
 } // namespace
 
-class E33CoopMod : public RC::CppUserModBase {
+class E33LanesMod : public RC::CppUserModBase {
 public:
-    E33CoopMod() : CppUserModBase()
+    E33LanesMod() : CppUserModBase()
     {
-        ModName = STR("E33Coop");
+        ModName = STR("E33Lanes");
         ModVersion = E33_STR(E33COOP_VERSION);
         ModDescription = STR("Coop en ligne pour Clair Obscur: Expedition 33");
-        ModAuthors = STR("kipavy");
+        ModAuthors = STR("kipavy, ryguyqwerty");
     }
 
-    ~E33CoopMod() override
+    ~E33LanesMod() override
     {
         e33::HookBus::get().unregister_all();
         e33::log().write("mod_unload", e33::JsonObj());   // diagnostic : sortie propre (absent : processus tué ou planté)
@@ -84,13 +84,13 @@ public:
         const auto& a = e33::launch_args();
         std::error_code ec;
         fs::create_directories(a.run_dir, ec);
-        const fs::path file = fs::path(a.run_dir) / (L"e33coop-" + a.instance + L".jsonl");
+        const fs::path file = fs::path(a.run_dir) / (L"e33lanes-" + a.instance + L".jsonl");
         e33::log().open(e33::ue::to_utf8(file.wstring()), e33::ue::to_utf8(a.instance), e33::ue::to_utf8(a.role));
         e33::log().write("mod_init", e33::JsonObj()
                                          .add("version", kModVersion)
                                          .add("log", e33::ue::to_utf8(file.wstring()))
                                          .add("test", e33::ue::to_utf8(a.test)));
-        Output::send<LogLevel::Default>(STR("[E33Coop] init, log: {}\n"), file.wstring());
+        Output::send<LogLevel::Default>(STR("[E33Lanes] init, log: {}\n"), file.wstring());
 
         subscribe_logging_hooks();
         e33::coop::init();          // avant le test runner : ses hooks de début de tour fixent les propriétaires
@@ -99,7 +99,7 @@ public:
 
         Hook::RegisterEngineTickPreCallback(
             [this](auto&, UEngine*, float dt, bool) { on_tick(dt); },
-            {false, false, STR("E33Coop"), STR("Tick")});
+            {false, false, STR("E33Lanes"), STR("Tick")});
     }
 
 private:
@@ -147,6 +147,6 @@ private:
 
 #define E33COOP_API __declspec(dllexport)
 extern "C" {
-E33COOP_API RC::CppUserModBase* start_mod() { return new E33CoopMod(); }
+E33COOP_API RC::CppUserModBase* start_mod() { return new E33LanesMod(); }
 E33COOP_API void uninstall_mod(RC::CppUserModBase* mod) { delete mod; }
 }

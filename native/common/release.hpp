@@ -13,8 +13,8 @@
 
 namespace e33::release {
 
-constexpr const char* kRepo = "kipavy/e33-coop";
-constexpr const char* kZipAsset = "e33coop-player.zip";
+constexpr const char* kRepo = "ryguyqwerty/e33-coop";
+constexpr const char* kZipAsset = "e33lanes-player.zip";
 constexpr const char* kSumsAsset = "SHA256SUMS";
 constexpr uint32_t kAppId = 1903340;
 
@@ -178,7 +178,7 @@ inline std::string find_game_win64(std::string steam_root, Read read, Exists exi
     return {};
 }
 
-// --- settings.ini du mod (ue4ss/Mods/E33Coop/settings.ini) ---------------------------------------------------------
+// --- settings.ini du mod (ue4ss/Mods/E33Lanes/settings.ini) ---------------------------------------------------------
 // Une option par ligne "clé = valeur", '#' ou ';' : commentaire. Les options de lancement -e33… restent prioritaires.
 struct SettingDef { const char* key; const char* arg; const char* def; const char* values; };
 constexpr SettingDef kSettings[] = {
@@ -256,7 +256,7 @@ inline std::string setting_or_default(const std::map<std::string, std::string>& 
 
 inline std::string default_settings_text()
 {
-    return "# E33 Coop - options (aussi modifiables en jeu : F9 ; ou avec l'installateur : Options).\r\n"
+    return "# E33 Lanes - options (aussi modifiables en jeu : F9 ; ou avec l'installateur : Options).\r\n"
            "# Une option par ligne. Les options de lancement Steam -e33... restent prioritaires.\r\n"
            "# lang : auto | fr | en          langue des textes du mod\r\n"
            "# updates : auto | ask | off     mises a jour depuis GitHub (auto : installee a la fermeture du jeu)\r\n"

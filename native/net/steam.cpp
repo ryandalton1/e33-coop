@@ -331,7 +331,7 @@ void poll_lobby(Lobby& l)
             l.owner = my_id();
             l.state = LobbyState::Ready;
             const auto bar = meta.find('|');
-            api.set_lobby_data(api.mm, l.id, "e33coop", "1");
+            api.set_lobby_data(api.mm, l.id, "e33lanes", "1");
             api.set_lobby_data(api.mm, l.id, "mod", meta.substr(0, bar).c_str());
             if (bar != std::string::npos) api.set_lobby_data(api.mm, l.id, "protocol", meta.substr(bar + 1).c_str());
         }

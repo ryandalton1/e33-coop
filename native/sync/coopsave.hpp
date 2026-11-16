@@ -1,6 +1,6 @@
 // Sauvegarde côté client (D15) : chaque joueur garde une copie à jour de la progression coop, hors de ses emplacements
 // perso (SaveGames\<SteamID>\ jamais touché), pour héberger plus tard la même partie (F10 au menu principal, rôle
-// hôte) ou au moins ne pas la perdre. Copies : SaveGames\e33coop\copies\<hôte>.sav (+ .json, + .prev.sav).
+// hôte) ou au moins ne pas la perdre. Copies : SaveGames\e33lanes\copies\<hôte>.sav (+ .json, + .prev.sav).
 #pragma once
 
 #include <cstdint>
@@ -30,7 +30,7 @@ void on_quit_to_title();
 bool hosting_copy();
 // Hôte : charge la copie la plus récente (autosave coupée) ; la progression ira dans cette copie.
 bool host_latest_copy(std::string& err);
-// Tests : installe une save (slot relatif à SaveGames, ex. "e33coop-test/TEST_B") comme copie coop de host_name.
+// Tests : installe une save (slot relatif à SaveGames, ex. "e33lanes-test/TEST_B") comme copie coop de host_name.
 bool install_copy(const std::wstring& slot, const std::string& host_name, std::string& err);
 
 } // namespace e33::coopsave

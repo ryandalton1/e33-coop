@@ -60,7 +60,7 @@ std::string char_name(UObject* character);   // nom d'objet court (ex. BP_Verso_
 std::string char_class(UObject* character);  // nom de classe (ex. BP_Verso_Battle2_C)
 std::string hardcoded_name(UObject* character);   // nom interne du héros (ex. "Verso")
 
-// Charge une save depuis un slot relatif à Saved\SaveGames (ex. "e33coop-test/TEST_A"), autosave coupée.
+// Charge une save depuis un slot relatif à Saved\SaveGames (ex. "e33lanes-test/TEST_A"), autosave coupée.
 bool load_save_slot(const std::wstring& slot, std::string& err);
 // Nouvelle partie (SaveManager.StartNewGame depuis le menu principal) ; no_autosave : aucune sauvegarde écrite.
 bool start_new_game(bool no_autosave, std::string& err);
@@ -145,7 +145,7 @@ int set_mechanic_fields(UObject* hero, const std::vector<std::pair<std::string, 
 // Dossier des saves (%LOCALAPPDATA%\Sandfall\Saved\SaveGames).
 std::wstring saves_dir();
 // Instantané de la partie en cours : CreateSaveGameDataFromGameState -> BP_SaveGameObject_V8_C -> SaveGameToSlot(slot),
-// puis lecture du fichier. slot relatif à SaveGames (ex. "e33coop/snapshot").
+// puis lecture du fichier. slot relatif à SaveGames (ex. "e33lanes/snapshot").
 bool make_snapshot(const std::wstring& slot, std::vector<uint8_t>& bytes, std::string& err);
 // Pion d'exploration possédé par le contrôleur (K2_GetPawn, sans parcours d'objets) ; nul en combat ou au menu.
 UObject* explore_pawn();

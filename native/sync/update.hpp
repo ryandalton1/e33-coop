@@ -1,6 +1,6 @@
-// Mises à jour depuis les releases GitHub (kipavy/e33-coop). Option « updates » (settings.ini / -e33updates) :
+// Mises à jour depuis les releases GitHub (ryguyqwerty/e33-coop, fork de kipavy/e33-coop). Option « updates » (settings.ini / -e33updates) :
 //  - auto (défaut) : au menu principal, vérification en arrière-plan ; version plus récente -> l'installateur du mod
-//    (« Installer E33 Coop.exe --stage ») la télécharge et la vérifie (SHA-256), puis l'installe à la fermeture du jeu ;
+//    (« Installer E33 Lanes.exe --stage ») la télécharge et la vérifie (SHA-256), puis l'installe à la fermeture du jeu ;
 //  - ask : carte « Nouvelle version X disponible — U pour mettre à jour » au menu principal ;
 //  - off : rien (sauf le message clair d'écart de version à la jonction).
 // Écart de version à la jonction : le côté le plus ancien est invité à mettre à jour (auto : tout de suite, puis

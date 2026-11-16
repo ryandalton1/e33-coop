@@ -48,8 +48,8 @@ inline bool get(std::wstring url, std::string& body, std::string& err, const Opt
 {
     body.clear();
     detail::Handle session;
-    session.h = WinHttpOpen(L"E33Coop-kipavy", WINHTTP_ACCESS_TYPE_AUTOMATIC_PROXY, WINHTTP_NO_PROXY_NAME, WINHTTP_NO_PROXY_BYPASS, 0);
-    if (!session.h) session.h = WinHttpOpen(L"E33Coop-kipavy", WINHTTP_ACCESS_TYPE_DEFAULT_PROXY, WINHTTP_NO_PROXY_NAME, WINHTTP_NO_PROXY_BYPASS, 0);
+    session.h = WinHttpOpen(L"E33Lanes", WINHTTP_ACCESS_TYPE_AUTOMATIC_PROXY, WINHTTP_NO_PROXY_NAME, WINHTTP_NO_PROXY_BYPASS, 0);
+    if (!session.h) session.h = WinHttpOpen(L"E33Lanes", WINHTTP_ACCESS_TYPE_DEFAULT_PROXY, WINHTTP_NO_PROXY_NAME, WINHTTP_NO_PROXY_BYPASS, 0);
     if (!session.h) { err = "WinHttpOpen " + std::to_string(GetLastError()); return false; }
     WinHttpSetTimeouts(session.h, o.timeout_ms, o.timeout_ms, o.timeout_ms, o.timeout_ms);
     DWORD protocols = WINHTTP_FLAG_SECURE_PROTOCOL_TLS1_2;
@@ -127,7 +127,7 @@ inline std::string latest_tag(std::string& err, int timeout_ms)
     Options o;
     o.timeout_ms = timeout_ms;
     o.max_bytes = 2u << 20;
-    if (!get(L"https://api.github.com/repos/kipavy/e33-coop/releases/latest", body, err, o)) return {};
+    if (!get(L"https://api.github.com/repos/ryguyqwerty/e33-coop/releases/latest", body, err, o)) return {};
     json::Value v;
     std::string perr;
     if (!json::parse(body, v, perr)) { err = "réponse GitHub illisible"; return {}; }
@@ -138,7 +138,7 @@ inline std::string latest_tag(std::string& err, int timeout_ms)
 
 inline std::wstring asset_url(const std::string& tag, const std::string& asset)
 {
-    std::wstring w = L"https://github.com/kipavy/e33-coop/releases/download/";
+    std::wstring w = L"https://github.com/ryguyqwerty/e33-coop/releases/download/";
     for (char c : tag) w.push_back(static_cast<wchar_t>(c));
     w.push_back(L'/');
     for (char c : asset) w.push_back(static_cast<wchar_t>(c));

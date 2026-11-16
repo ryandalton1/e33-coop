@@ -40,7 +40,7 @@ uint32_t read_build_id()
 std::vector<std::string> read_gameplay_mods()
 {
     static const char* builtin[] = {"CheatManagerEnablerMod", "ConsoleCommandsMod", "ConsoleEnablerMod", "SplitScreenMod", "LineTraceMod",
-                                    "BPML_GenericFunctions", "BPModLoaderMod", "Keybinds", "E33Coop", "E33Explore"};
+                                    "BPML_GenericFunctions", "BPModLoaderMod", "Keybinds", "E33Lanes", "E33Explore"};
     std::vector<std::string> mods;
     const auto mods_txt = game_root() / L"Sandfall/Binaries/Win64/ue4ss/Mods/mods.txt";
     std::ifstream f(mods_txt);
@@ -319,7 +319,7 @@ void pump_network()
             if (!peer) {
                 const uint16_t pv = net::Link::packet_protocol(d.data.data(), d.data.size());
                 if (pv == 0 && d.data.size() == 8 && std::memcmp(d.data.data(), "E33S", 4) == 0) { bump("steam_selftest_received"); continue; }
-                if (pv == 0) { log().write("net_ignored", JsonObj().add("peer", d.peer).add("why", "not an E33Coop packet")); continue; }
+                if (pv == 0) { log().write("net_ignored", JsonObj().add("peer", d.peer).add("why", "not an E33Lanes packet")); continue; }
                 if (pv != proto::kProtocolVersion) {
                     // Autre version du mod : on répond avec notre version (son jeu affiche l'écart), sans créer de pair.
                     const auto pkt = net::Link::version_packet(1);

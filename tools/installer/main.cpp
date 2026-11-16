@@ -1,12 +1,12 @@
-// « Installer E33 Coop.exe » : installation, mise à jour, options et désinstallation du mod coop, en un seul fichier.
+// « Installer E33 Lanes.exe » : installation, mise à jour, options et désinstallation du mod coop, en un seul fichier.
 //  - sans argument : écran Installer / Mettre à jour / Options / Désinstaller (jeu trouvé tout seul par Steam) ;
 //  - --update : lancé par le mod (touche U) : attend la fermeture du jeu, met à jour, relance le jeu par Steam ;
 //  - --stage : lancé par le mod (option updates=auto), sans fenêtre : télécharge et vérifie la mise à jour, puis
 //    l'installe à la fermeture du jeu.
-// Paquet : dernière release GitHub de kipavy/e33-coop (e33coop-player.zip), téléchargé en HTTPS depuis github.com
+// Paquet : dernière release GitHub de ryguyqwerty/e33-coop (e33lanes-player.zip), téléchargé en HTTPS depuis github.com
 // seulement, SHA-256 vérifié contre le SHA256SUMS de la même release ; ou un zip posé à côté de l'exe avec son
 // SHA256SUMS (hors ligne). Seul le dossier Sandfall\Binaries\Win64 du jeu est modifié (dwmapi.dll + ue4ss\), l'ancien
-// contenu est mis de côté dans Win64\e33coop-backup-<date> et remis en place si l'installation échoue.
+// contenu est mis de côté dans Win64\e33lanes-backup-<date> et remis en place si l'installation échoue.
 #ifndef NOMINMAX
 #define NOMINMAX
 #endif
@@ -42,21 +42,21 @@ using namespace e33;
 
 namespace {
 
-constexpr const wchar_t* kTitle = L"E33 Coop";
-constexpr const wchar_t* kExeName = L"Installer E33 Coop.exe";
+constexpr const wchar_t* kTitle = L"E33 Lanes";
+constexpr const wchar_t* kExeName = L"Installer E33 Lanes.exe";
 constexpr const wchar_t* kGameExe = L"SandFall-Win64-Shipping.exe";
 constexpr size_t kMaxZip = 300u << 20;
 
 bool g_fr = true;
 const wchar_t* T(const wchar_t* fr, const wchar_t* en) { return g_fr ? fr : en; }
 
-// --- Journal (%TEMP%\E33CoopInstaller.log) ---------------------------------------------------------------------------
+// --- Journal (%TEMP%\E33LanesInstaller.log) ---------------------------------------------------------------------------
 std::mutex g_log_mu;
 fs::path log_path()
 {
     wchar_t tmp[MAX_PATH]{};
     GetTempPathW(MAX_PATH, tmp);
-    return fs::path(tmp) / L"E33CoopInstaller.log";
+    return fs::path(tmp) / L"E33LanesInstaller.log";
 }
 std::string utf8(const std::wstring& w)
 {
@@ -178,7 +178,7 @@ fs::path find_game()
     return g.empty() ? fs::path() : fs::path(wide(g));
 }
 
-fs::path mod_dir(const fs::path& win64) { return win64 / L"ue4ss" / L"Mods" / L"E33Coop"; }
+fs::path mod_dir(const fs::path& win64) { return win64 / L"ue4ss" / L"Mods" / L"E33Lanes"; }
 
 std::string installed_version(const fs::path& win64)
 {
@@ -206,7 +206,7 @@ fs::path temp_root()
 {
     wchar_t tmp[MAX_PATH]{};
     GetTempPathW(MAX_PATH, tmp);
-    return fs::path(tmp) / L"E33CoopInstaller";
+    return fs::path(tmp) / L"E33LanesInstaller";
 }
 
 // Dernière release : tag vX.Y.Z (vide + err hors ligne).
@@ -222,7 +222,7 @@ bool download_release(const std::string& tag, std::string& zip_out, std::string&
     if (!https::get(https::asset_url(tag, release::kSumsAsset), sums_out, err, o)) { err = "SHA256SUMS : " + err; return false; }
     const auto sums = release::parse_sha256sums(sums_out);
     const auto it = sums.find(release::kZipAsset);
-    if (it == sums.end()) { err = "SHA256SUMS sans e33coop-player.zip"; return false; }
+    if (it == sums.end()) { err = "SHA256SUMS sans e33lanes-player.zip"; return false; }
     https::Options z;
     z.max_bytes = kMaxZip;
     z.timeout_ms = 30000;
@@ -234,7 +234,7 @@ bool download_release(const std::string& tag, std::string& zip_out, std::string&
             pr->set(t, total ? static_cast<int>(done * 100 / total) : -1);
         };
     }
-    if (!https::get(https::asset_url(tag, release::kZipAsset), zip_out, err, z)) { err = "e33coop-player.zip : " + err; return false; }
+    if (!https::get(https::asset_url(tag, release::kZipAsset), zip_out, err, z)) { err = "e33lanes-player.zip : " + err; return false; }
     if (pr) pr->set(T(L"Vérification de l'empreinte SHA-256…", L"Verifying the SHA-256 checksum…"));
     const std::string got = sha256_hex(zip_out);
     if (got != it->second) {
@@ -253,7 +253,7 @@ bool verified_local_zip(const fs::path& zip, const fs::path& sums_file, std::str
     if (!fs::is_regular_file(zip, ec) || !fs::is_regular_file(sums_file, ec)) { err = "zip ou SHA256SUMS absent"; return false; }
     const auto sums = release::parse_sha256sums(read_file(sums_file, 64u << 10));
     const auto it = sums.find(release::kZipAsset);
-    if (it == sums.end()) { err = "SHA256SUMS sans e33coop-player.zip"; return false; }
+    if (it == sums.end()) { err = "SHA256SUMS sans e33lanes-player.zip"; return false; }
     zip_out = read_file(zip, kMaxZip);
     if (sha256_hex(zip_out) != it->second) { err = "empreinte SHA-256 différente : zip refusé"; return false; }
     return true;
@@ -279,7 +279,7 @@ bool extract_zip(const std::string& zip, Package& pkg, std::string& err)
     const fs::path root = temp_root() / (L"pkg-" + std::to_wstring(GetCurrentProcessId()) + L"-" + std::to_wstring(GetTickCount64()));
     fs::remove_all(root, ec);
     fs::create_directories(root / L"x", ec);
-    const fs::path zp = root / L"e33coop-player.zip";
+    const fs::path zp = root / L"e33lanes-player.zip";
     if (!write_file(zp, zip)) { err = "écriture du zip impossible dans " + utf8(root.wstring()); return false; }
     wchar_t sys[MAX_PATH]{};
     GetSystemDirectoryW(sys, MAX_PATH);
@@ -287,9 +287,9 @@ bool extract_zip(const std::string& zip, Package& pkg, std::string& err)
     const std::wstring cmd = L"\"" + std::wstring(sys) + L"\\tar.exe\" -xf \"" + zp.wstring() + L"\" -C \"" + (root / L"x").wstring() + L"\"";
     if (!run_wait(cmd, code) || code != 0) { err = "extraction du zip impossible (tar.exe, code " + std::to_string(code) + ")"; return false; }
     pkg.dir = root / L"x";
-    for (const wchar_t* need : {L"game\\dwmapi.dll", L"game\\ue4ss\\UE4SS.dll", L"game\\ue4ss\\Mods\\mods.txt", L"game\\ue4ss\\Mods\\E33Coop\\dlls\\main.dll"})
+    for (const wchar_t* need : {L"game\\dwmapi.dll", L"game\\ue4ss\\UE4SS.dll", L"game\\ue4ss\\Mods\\mods.txt", L"game\\ue4ss\\Mods\\E33Lanes\\dlls\\main.dll"})
         if (!fs::is_regular_file(pkg.dir / need, ec)) { err = "paquet incomplet : " + utf8(need) + " manque"; return false; }
-    pkg.version = release::trim(read_file(pkg.dir / L"game\\ue4ss\\Mods\\E33Coop\\version.txt", 64));
+    pkg.version = release::trim(read_file(pkg.dir / L"game\\ue4ss\\Mods\\E33Lanes\\version.txt", 64));
     return true;
 }
 
@@ -331,7 +331,7 @@ void prune_backups(const fs::path& win64)
     std::vector<fs::path> b;
     std::error_code ec;
     for (auto it = fs::directory_iterator(win64, ec); !ec && it != fs::directory_iterator(); it.increment(ec))
-        if (it->is_directory(ec) && it->path().filename().wstring().rfind(L"e33coop-backup-", 0) == 0) b.push_back(it->path());
+        if (it->is_directory(ec) && it->path().filename().wstring().rfind(L"e33lanes-backup-", 0) == 0) b.push_back(it->path());
     std::sort(b.begin(), b.end());
     while (b.size() > 3) { fs::remove_all(b.front(), ec); logline("old backup removed: " + utf8(b.front().wstring())); b.erase(b.begin()); }
 }
@@ -349,7 +349,7 @@ bool install_package(const fs::path& win64, const Package& pkg, Progress* pr, st
     kept.remotetest = read_file(mod_dir(win64) / L"remotetest.txt", 4096);
     // 1. Mise de côté
     std::vector<std::wstring> moved;
-    const fs::path bak = win64 / (L"e33coop-backup-" + now_stamp());
+    const fs::path bak = win64 / (L"e33lanes-backup-" + now_stamp());
     auto restore = [&] {
         fs::remove(win64 / L"dwmapi.dll", ec);
         fs::remove_all(win64 / L"ue4ss", ec);
@@ -380,7 +380,7 @@ bool install_package(const fs::path& win64, const Package& pkg, Progress* pr, st
     // ne lit que le dossier du mod, et une mise à jour juste après un bug les rendait inaccessibles (2026-10-24).
     {
         std::error_code e4;
-        const fs::path old_logs = bak / L"ue4ss" / L"Mods" / L"E33Coop" / L"logs";
+        const fs::path old_logs = bak / L"ue4ss" / L"Mods" / L"E33Lanes" / L"logs";
         if (fs::exists(old_logs, e4)) fs::copy(old_logs, md / L"logs", fs::copy_options::recursive | fs::copy_options::skip_existing, e4);
     }
     if (!write_file(md / L"settings.ini", kept.settings.empty() ? release::default_settings_text() : kept.settings)) { err = "settings.ini"; restore(); return false; }
@@ -428,7 +428,7 @@ bool obtain_package(const std::string& tag, Package& pkg, Progress* pr, std::str
         if (pr && pr->cancel) return false;
         const fs::path here = self_path().parent_path();
         std::string lerr;
-        if (!verified_local_zip(here / L"e33coop-player.zip", here / L"SHA256SUMS", zip, lerr)) {
+        if (!verified_local_zip(here / L"e33lanes-player.zip", here / L"SHA256SUMS", zip, lerr)) {
             if (tag.empty()) err = "dernière version inconnue (hors ligne ?) et pas de zip vérifiable à côté de l'installateur (" + lerr + ")";
             return false;
         }
@@ -687,7 +687,7 @@ int mode_stage(const fs::path& win64)
     if (!download_release(tag, zip, sums, nullptr, err)) { write_file(upd / L"error.txt", err); logline("stage: " + err); return 1; }
     std::error_code ec;
     fs::create_directories(upd, ec);
-    write_file(upd / L"e33coop-player.zip", zip);
+    write_file(upd / L"e33lanes-player.zip", zip);
     write_file(upd / L"SHA256SUMS", sums);
     write_file(upd / L"ready.txt", "version=" + tag.substr(1) + "\r\n");
     logline("stage: " + tag + " ready, waiting for the game to close");
@@ -695,7 +695,7 @@ int mode_stage(const fs::path& win64)
     Sleep(3000);
     // Zip relu depuis le dossier du mod et revérifié (il a pu changer depuis).
     std::string z2;
-    if (!verified_local_zip(upd / L"e33coop-player.zip", upd / L"SHA256SUMS", z2, err)) { logline("stage: " + err); return 1; }
+    if (!verified_local_zip(upd / L"e33lanes-player.zip", upd / L"SHA256SUMS", z2, err)) { logline("stage: " + err); return 1; }
     Package pkg;
     if (!extract_zip(z2, pkg, err) || !install_package(win64, pkg, nullptr, err)) { logline("stage install failed: " + err); return 1; }
     fs::remove_all(pkg.dir.parent_path(), ec);
@@ -733,7 +733,7 @@ int mode_interactive(fs::path win64)
 {
     if (win64.empty()) win64 = find_game();
     std::string tag, terr;
-    run_job(T(L"Installateur E33 Coop", L"E33 Coop installer"), [&](Progress& pr, std::string&) {
+    run_job(T(L"Installateur E33 Lanes", L"E33 Lanes installer"), [&](Progress& pr, std::string&) {
         pr.set(T(L"Recherche de la dernière version sur GitHub…", L"Looking for the latest version on GitHub…"));
         tag = latest_tag(terr);
         return true;
@@ -768,7 +768,7 @@ int mode_interactive(fs::path win64)
         c.pButtons = buttons.data();
         c.cButtons = static_cast<UINT>(buttons.size());
         c.dwCommonButtons = TDCBF_CLOSE_BUTTON;
-        c.pszFooter = T(L"Mod non officiel · github.com/kipavy/e33-coop", L"Unofficial mod · github.com/kipavy/e33-coop");
+        c.pszFooter = T(L"Mod non officiel · github.com/ryguyqwerty/e33-coop", L"Unofficial mod · github.com/ryguyqwerty/e33-coop");
         int b = 0;
         if (FAILED(TaskDialogIndirect(&c, &b, nullptr, nullptr))) return 1;
         if (b == 10) {
@@ -811,7 +811,7 @@ bool relocate_if_needed(const std::vector<std::wstring>& args)
 {
     const fs::path self = self_path();
     const fs::path md = self.parent_path();
-    if (_wcsicmp(md.filename().c_str(), L"E33Coop") != 0 || _wcsicmp(md.parent_path().parent_path().filename().c_str(), L"ue4ss") != 0) return false;
+    if (_wcsicmp(md.filename().c_str(), L"E33Lanes") != 0 || _wcsicmp(md.parent_path().parent_path().filename().c_str(), L"ue4ss") != 0) return false;
     const fs::path win64 = md.parent_path().parent_path().parent_path();
     if (!is_win64(win64)) return false;
     std::error_code ec;
@@ -863,10 +863,10 @@ int WINAPI wWinMain(HINSTANCE, HINSTANCE, PWSTR, int)
         else if (l == "en") g_fr = false;
     }
     // Une seule instance à la fois.
-    HANDLE mtx = CreateMutexW(nullptr, TRUE, L"Local\\E33CoopInstaller");
+    HANDLE mtx = CreateMutexW(nullptr, TRUE, L"Local\\E33LanesInstaller");
     if (GetLastError() == ERROR_ALREADY_EXISTS) {
-        if (!stage) message(kTitle, T(L"L'installateur E33 Coop est déjà ouvert (ou une mise à jour attend la fermeture du jeu).",
-                                      L"The E33 Coop installer is already running (or an update is waiting for the game to close)."));
+        if (!stage) message(kTitle, T(L"L'installateur E33 Lanes est déjà ouvert (ou une mise à jour attend la fermeture du jeu).",
+                                      L"The E33 Lanes installer is already running (or an update is waiting for the game to close)."));
         return 0;
     }
     int rc = 0;

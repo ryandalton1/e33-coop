@@ -60,7 +60,7 @@ inline std::wstring widen(const std::string& s)
     return w;
 }
 
-// Dossier du mod (…/ue4ss/Mods/E33Coop) : celui du DLL qui contient ce code (…/E33Coop/dlls/main.dll).
+// Dossier du mod (…/ue4ss/Mods/E33Lanes) : celui du DLL qui contient ce code (…/E33Lanes/dlls/main.dll).
 inline std::filesystem::path mod_dir_path()
 {
     HMODULE self = nullptr;
@@ -158,7 +158,7 @@ inline const std::vector<std::wstring>& test_args()
 
 inline bool test_mode() { return !test_path().empty(); }
 
-// --- Options du joueur : ue4ss/Mods/E33Coop/settings.ini (format : native/common/release.hpp) ---------------------
+// --- Options du joueur : ue4ss/Mods/E33Lanes/settings.ini (format : native/common/release.hpp) ---------------------
 // Ordre : test -> options du scénario seulement ; sinon option de lancement -e33…, puis settings.ini, puis défaut.
 inline std::filesystem::path settings_path() { return mod_dir_path() / L"settings.ini"; }
 

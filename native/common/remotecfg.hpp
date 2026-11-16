@@ -1,5 +1,5 @@
 #pragma once
-// Mode « test à distance » : configuration côté joueur (fichier ue4ss/Mods/E33Coop/remotetest.txt, écrit par
+// Mode « test à distance » : configuration côté joueur (fichier ue4ss/Mods/E33Lanes/remotetest.txt, écrit par
 // install.ps1 -RemoteTest <SteamID>). Supprimer le fichier désactive tout. Sans dépendance (testé dans tools/tests).
 //
 // Format (une option par ligne, # = commentaire) :

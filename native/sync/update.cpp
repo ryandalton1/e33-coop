@@ -27,7 +27,7 @@ namespace e33::update {
 
 namespace {
 
-constexpr const wchar_t* kInstaller = L"Installer E33 Coop.exe";
+constexpr const wchar_t* kInstaller = L"Installer E33 Lanes.exe";
 constexpr int64_t kRejoinMaxAge = 15 * 60;
 
 struct S {
@@ -54,7 +54,7 @@ struct S {
 } s;
 
 fs::path installer_path() { return cmdline::mod_dir_path() / kInstaller; }
-fs::path rejoin_path() { return fs::path(game::saves_dir()) / L"e33coop" / L"rejoin.txt"; }
+fs::path rejoin_path() { return fs::path(game::saves_dir()) / L"e33lanes" / L"rejoin.txt"; }
 
 // Installateur du mod : chemin fixe, arguments fixes (aucune donnée venant du réseau sur la ligne de commande).
 bool launch_installer(const wchar_t* mode)

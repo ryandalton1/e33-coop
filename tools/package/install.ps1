@@ -1,9 +1,9 @@
-# E33 Coop - installation (player package), script version of "Installer E33 Coop.exe". Run from the unzipped folder:
+# E33 Lanes - installation (player package), script version of "Installer E33 Lanes.exe". Run from the unzipped folder:
 #   powershell -NoProfile -ExecutionPolicy Bypass -File install.ps1 [-GameDir "D:\SteamLibrary\steamapps\common\Expedition 33"]
-# Copies UE4SS and the E33Coop mod into the game's Win64 folder (dwmapi.dll + ue4ss\). Saves are never touched.
-# A previous dwmapi.dll / ue4ss folder is moved to Win64\e33coop-backup-<date> first.
+# Copies UE4SS and the E33Lanes mod into the game's Win64 folder (dwmapi.dll + ue4ss\). Saves are never touched.
+# A previous dwmapi.dll / ue4ss folder is moved to Win64\e33lanes-backup-<date> first.
 # Remote test (docs/REMOTE-TEST.md), optional, nothing written outside the game's Win64 folder:
-#   -RemoteTest <host SteamID64>  trust this host for remote tests (ue4ss\Mods\E33Coop\remotetest.txt)
+#   -RemoteTest <host SteamID64>  trust this host for remote tests (ue4ss\Mods\E33Lanes\remotetest.txt)
 #   -AllowRestart                 ...and let it restart the game (Steam relaunch)
 #   -AllowUpdate                  ...and let it install new versions of the mod (with automatic rollback)
 #   -NoRemoteTest                 turn remote test off (otherwise a previous setting is kept on reinstall)
@@ -40,20 +40,20 @@ $win64 = Join-Path $GameDir "Sandfall\Binaries\Win64"
 if (-not (Test-Path (Join-Path $win64 "SandFall-Win64-Shipping.exe"))) { throw "Not the game folder: $GameDir" }
 if (Get-Process "SandFall-Win64-Shipping" -ErrorAction SilentlyContinue) { throw "Close the game first." }
 
-$modDir = Join-Path $win64 "ue4ss\Mods\E33Coop"
+$modDir = Join-Path $win64 "ue4ss\Mods\E33Lanes"
 $cfgPath = Join-Path $modDir "remotetest.txt"
 $previousCfg = if (Test-Path $cfgPath) { Get-Content $cfgPath -Raw } else { $null }
 $settingsPath = Join-Path $modDir "settings.ini"
 $previousSettings = if (Test-Path $settingsPath) { [IO.File]::ReadAllText($settingsPath) } else { $null }
 $old = @((Join-Path $win64 "dwmapi.dll"), (Join-Path $win64 "ue4ss")) | Where-Object { Test-Path $_ }
 if ($old) {
-    $bak = Join-Path $win64 ("e33coop-backup-" + (Get-Date -Format "yyyyMMdd-HHmmss"))
+    $bak = Join-Path $win64 ("e33lanes-backup-" + (Get-Date -Format "yyyyMMdd-HHmmss"))
     New-Item -ItemType Directory $bak | Out-Null
     foreach ($o in $old) {
         try { Move-Item $o $bak }
         catch {
             throw ("Cannot move $o (a file inside is in use). Close any text editor or Explorer window showing the " +
-                   "E33Coop logs, wait for the game and its crash reporter to fully exit, then run install.ps1 again. " +
+                   "E33Lanes logs, wait for the game and its crash reporter to fully exit, then run install.ps1 again. " +
                    "Fichier utilise : fermez l'editeur ou la fenetre de l'Explorateur ouverte sur les journaux, puis relancez. ($($_.Exception.Message))")
         }
     }
@@ -65,7 +65,7 @@ Copy-Item (Join-Path $here "game\ue4ss") $win64 -Recurse -Force
 # Options du joueur (settings.ini) : gardées d'une installation à l'autre, sinon valeurs par défaut commentées.
 if ($previousSettings) { [IO.File]::WriteAllText($settingsPath, $previousSettings, (New-Object System.Text.UTF8Encoding $false)) }
 elseif (-not (Test-Path $settingsPath)) {
-    $default = "# E33 Coop - options (aussi modifiables en jeu : F9 ; ou avec l'installateur : Options).`r`n" +
+    $default = "# E33 Lanes - options (aussi modifiables en jeu : F9 ; ou avec l'installateur : Options).`r`n" +
                "# Une option par ligne. Les options de lancement Steam -e33... restent prioritaires.`r`n" +
                "# lang : auto | fr | en          langue des textes du mod`r`n" +
                "# updates : auto | ask | off     mises a jour depuis GitHub (auto : installee a la fermeture du jeu)`r`n" +
@@ -81,7 +81,7 @@ elseif (-not (Test-Path $settingsPath)) {
 $cfg = $null
 if ($NoRemoteTest) { $cfg = $null }
 elseif ($RemoteTest) {
-    $cfg = "# E33 Coop - test a distance (docs/REMOTE-TEST.md). Supprimer ce fichier desactive tout.`r`nhost=$RemoteTest`r`n" +
+    $cfg = "# E33 Lanes - test a distance (docs/REMOTE-TEST.md). Supprimer ce fichier desactive tout.`r`nhost=$RemoteTest`r`n" +
            "restart=$([int][bool]$AllowRestart)`r`nupdate=$([int][bool]$AllowUpdate)`r`n"
 } elseif ($previousCfg) { $cfg = $previousCfg; Write-Output "Remote test setting kept from the previous install (-NoRemoteTest to turn it off)." }
 if ($cfg) {
@@ -103,4 +103,4 @@ Write-Output (Get-Content (Join-Path $here "build-info.txt") -Raw)
 Write-Output "Start the game from Steam WITHOUT launch options (remove any old -e33role / -e33transport / -e33join)."
 Write-Output "  Invite: load your game, press F7.   Join: at the main menu, 'Join <friend>' or F7, or accept the Steam invite."
 Write-Output "  Options: F9 in game, or $settingsPath"
-Write-Output "Uninstall: powershell -NoProfile -ExecutionPolicy Bypass -File uninstall.ps1 (or 'Installer E33 Coop.exe')"
+Write-Output "Uninstall: powershell -NoProfile -ExecutionPolicy Bypass -File uninstall.ps1 (or 'Installer E33 Lanes.exe')"

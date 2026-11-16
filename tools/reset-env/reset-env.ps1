@@ -2,7 +2,7 @@
 #  - arrête le jeu s'il tourne
 #  - vérifie / met à jour la sauvegarde des saves perso (snapshot horodaté si elles ont changé)
 #  - garde les saves perso en lecture seule (sauf steam_autocloud.vdf)
-#  - restaure les saves de test dans SaveGames\e33coop-test\ (hors Steam Cloud)
+#  - restaure les saves de test dans SaveGames\e33lanes-test\ (hors Steam Cloud)
 #  - réinstalle UE4SS + nos mods dans le dossier Win64 du jeu (seul dossier modifié)
 param(
     [string]$GameDir = "E:\SteamLibrary\steamapps\common\Expedition 33",
@@ -15,7 +15,7 @@ $repo = (Resolve-Path "$PSScriptRoot\..\..").Path
 $savesRoot = Join-Path $env:LOCALAPPDATA "Sandfall\Saved\SaveGames"
 $backupRoot = "C:\Users\Killian\dev\e33-coop-backups"
 $testSavesSrc = Join-Path $repo ".tools\testsaves"
-$testSavesDst = Join-Path $savesRoot "e33coop-test"
+$testSavesDst = Join-Path $savesRoot "e33lanes-test"
 
 function Log($m) { Write-Output "[reset-env] $m" }
 
@@ -56,17 +56,17 @@ if (Test-Path $testSavesSrc) {
 }
 Log ("saves de test : " + ((Get-ChildItem $testSavesDst -File | ForEach-Object Name) -join ", "))
 # Emplacement coop (instantanés de l'hôte reçus ou envoyés, D12) : vidé avant chaque run.
-$coopSaves = Join-Path $savesRoot "e33coop"
+$coopSaves = Join-Path $savesRoot "e33lanes"
 if (Test-Path $coopSaves) { Get-ChildItem $coopSaves -File | Remove-Item -Force }
-# Copies coop des tests (D15) ; les vraies copies (e33coop\copies) ne sont jamais touchées.
+# Copies coop des tests (D15) ; les vraies copies (e33lanes\copies) ne sont jamais touchées.
 $testCopies = Join-Path $coopSaves "test-copies"
 if (Test-Path $testCopies) { Get-ChildItem $testCopies -File | Remove-Item -Force }
 
 # 4. Mods
 $win64 = Join-Path $GameDir "Sandfall\Binaries\Win64"
 $ue = Join-Path $win64 "ue4ss"
-# Journaux des vraies parties (ue4ss\Mods\E33Coop\logs) mis de côté avant de retirer le mod (effacés par les tests le 2026-10-21).
-$gameLogs = Join-Path $ue "Mods\E33Coop\logs"
+# Journaux des vraies parties (ue4ss\Mods\E33Lanes\logs) mis de côté avant de retirer le mod (effacés par les tests le 2026-10-21).
+$gameLogs = Join-Path $ue "Mods\E33Lanes\logs"
 if ((Test-Path $gameLogs) -and (Get-ChildItem $gameLogs -ErrorAction SilentlyContinue)) {
     $dst = Join-Path $backupRoot ("game-logs-" + (Get-Date -Format "yyyyMMdd-HHmmss"))
     Copy-Item $gameLogs $dst -Recurse
@@ -84,10 +84,10 @@ if ($Package) {
     Copy-Item (Join-Path $Package "ue4ss\UE4SS.dll") $ue -Force
     Copy-Item (Join-Path $Package "ue4ss\Mods\*") (Join-Path $ue "Mods") -Recurse -Force
     $mods = Join-Path $ue "Mods\mods.txt"
-    $lines = Get-Content $mods | Where-Object { $_ -notmatch '^E33Coop\s*:' }
+    $lines = Get-Content $mods | Where-Object { $_ -notmatch '^E33Lanes\s*:' }
     $idx = [Array]::FindIndex([string[]]$lines, [Predicate[string]]{ param($l) $l -match '^Keybinds' })
     if ($idx -lt 0) { $idx = $lines.Count }
-    $lines = @($lines[0..($idx - 1)]) + "E33Coop : 1" + @($lines[$idx..($lines.Count - 1)])
+    $lines = @($lines[0..($idx - 1)]) + "E33Lanes : 1" + @($lines[$idx..($lines.Count - 1)])
     Set-Content $mods $lines -Encoding ascii
     Log "paquet natif installé depuis $Package"
 }

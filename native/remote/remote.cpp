@@ -295,7 +295,7 @@ std::vector<Item> fetch_items(int count, std::vector<std::string>& notes)
     std::vector<Item> items;
     uint64_t total = 0;
     std::error_code ec;
-    // 1. Derniers dossiers de journaux du mod (ue4ss/Mods/E33Coop/logs/<date-heure> ou remote-<date-heure>).
+    // 1. Derniers dossiers de journaux du mod (ue4ss/Mods/E33Lanes/logs/<date-heure> ou remote-<date-heure>).
     // Aussi les journaux des sauvegardes de l'installateur (Win6433coop-backup-*E4ssMods33Coopogs) : une mise à
     // jour juste après un bug les y déplaçait, hors de portée (2026-10-24). Même nom de dossier : le plus récent gardé.
     std::vector<std::pair<fs::file_time_type, fs::path>> dirs;
@@ -303,8 +303,8 @@ std::vector<Item> fetch_items(int count, std::vector<std::string>& notes)
     const fs::path win64 = mod_dir().parent_path().parent_path().parent_path();
     for (auto it = fs::directory_iterator(win64, ec); !ec && it != fs::directory_iterator(); it.increment(ec)) {
         std::error_code e2;
-        if (it->is_directory(e2) && it->path().filename().wstring().rfind(L"e33coop-backup-", 0) == 0)
-            roots.push_back(it->path() / L"ue4ss" / L"Mods" / L"E33Coop" / L"logs");
+        if (it->is_directory(e2) && it->path().filename().wstring().rfind(L"e33lanes-backup-", 0) == 0)
+            roots.push_back(it->path() / L"ue4ss" / L"Mods" / L"E33Lanes" / L"logs");
     }
     ec.clear();
     std::set<std::wstring> names;
@@ -330,12 +330,12 @@ std::vector<Item> fetch_items(int count, std::vector<std::string>& notes)
     add_file(items, mod_dir().parent_path().parent_path() / L"UE4SS.log", "UE4SS.log", total, notes);
     // Journal des assistants (relance, mise à jour, retour arrière).
     add_file(items, remote_dir() / L"helper.log", "remote/helper.log", total, notes);
-    // 3. Saves coop seulement (SaveGames\e33coop\*.sav), jamais les saves perso (SaveGames\<SteamID>\…).
+    // 3. Saves coop seulement (SaveGames\e33lanes\*.sav), jamais les saves perso (SaveGames\<SteamID>\…).
     if (const fs::path sd = saves_dir(); !sd.empty()) {
-        for (auto it = fs::directory_iterator(sd / L"e33coop", ec); !ec && it != fs::directory_iterator(); it.increment(ec)) {
+        for (auto it = fs::directory_iterator(sd / L"e33lanes", ec); !ec && it != fs::directory_iterator(); it.increment(ec)) {
             std::error_code e2;
             if (it->is_regular_file(e2) && it->path().extension() == L".sav")
-                add_file(items, it->path(), "saves/e33coop/" + ue::to_utf8(it->path().filename().wstring()), total, notes);
+                add_file(items, it->path(), "saves/e33lanes/" + ue::to_utf8(it->path().filename().wstring()), total, notes);
         }
     }
     return items;
@@ -530,8 +530,8 @@ void client_command(const Packet& p)
         if (!s.at_menu) { reply_error(p.req, "seulement depuis le menu principal"); return; }
         if (coop::active() && coop::session_ok() && coop::connected_players() > 0) { reply_error(p.req, "session coop en cours"); return; }
         std::error_code ec;
-        if (!fs::exists(saves_dir() / L"e33coop" / L"host.sav", ec)) { reply_error(p.req, "pas d'instantané coop (SaveGames\\e33coop\\host.sav)"); return; }
-        if (!game::load_save_slot(L"e33coop/host", err)) { reply_error(p.req, err); return; }   // autosave coupée
+        if (!fs::exists(saves_dir() / L"e33lanes" / L"host.sav", ec)) { reply_error(p.req, "pas d'instantané coop (SaveGames\\e33lanes\\host.sav)"); return; }
+        if (!game::load_save_slot(L"e33lanes/host", err)) { reply_error(p.req, err); return; }   // autosave coupée
         s.snapshot_loaded = true;
         reply(p.req, true, "{}");
         return;

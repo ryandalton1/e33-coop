@@ -20,7 +20,7 @@ for ($i = $start + 1; $i -lt $lines.Count; $i++) {
 $text = ($body -join "`n").Trim()
 if (-not ($text -match '(?m)^- ')) { Write-Error "CHANGELOG.md : section [$Version] vide"; exit 1 }
 $notes = @"
-**E33 Coop $Version** : mod coop en ligne pour *Clair Obscur: Expedition 33* (mod non officiel).
+**E33 Lanes $Version** : mod coop en ligne pour *Clair Obscur: Expedition 33* (mod non officiel).
 
 $text
 
@@ -30,8 +30,8 @@ $text
 3. Lancer le jeu par Steam, **sans option de lancement**. Inviter : charger sa partie puis **F7**. Rejoindre : au menu principal, **Rejoindre <ami>** ou **F7**, ou accepter l'invitation Steam.
 
 Mises à jour : automatiques par défaut (installées à la fermeture du jeu). Options : **F9** en jeu.
-Hors ligne : poser ``e33coop-player.zip`` et ``SHA256SUMS`` à côté de l'installateur.
+Hors ligne : poser ``e33lanes-player.zip`` et ``SHA256SUMS`` à côté de l'installateur.
 
-Empreintes : voir ``SHA256SUMS``. Historique complet : [CHANGELOG.md](https://github.com/kipavy/e33-coop/blob/main/CHANGELOG.md).
+Empreintes : voir ``SHA256SUMS``. Historique complet : [CHANGELOG.md](https://github.com/ryguyqwerty/e33-coop/blob/fork/main/CHANGELOG.md).
 "@
 if ($Out) { [IO.File]::WriteAllText($Out, $notes + "`n", (New-Object Text.UTF8Encoding $false)) } else { $notes }

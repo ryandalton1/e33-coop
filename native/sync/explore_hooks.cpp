@@ -80,7 +80,7 @@ void subscribe()
         s.net.publish(proto::WorldInteract{++s.seq, "freeaim:" + path, false}, true);
         bump("freeaim_hits_published"); touch();
     });
-    RC::Unreal::Hook::RegisterProcessEventPreCallback(&gpe_pe_hook, {false, false, STR("E33Coop"), STR("ExploreGPE")});
+    RC::Unreal::Hook::RegisterProcessEventPreCallback(&gpe_pe_hook, {false, false, STR("E33Lanes"), STR("ExploreGPE")});
     bus.pre(L"/Game/Gameplay/DialogueSystem/BP_DialogueSystemComponent.BP_DialogueSystemComponent_C:OnChoiceMade", [](HookCtx& ctx, UFunction* f) {
         s.choice_pending = false;
         s.choice_hover_want = -1;

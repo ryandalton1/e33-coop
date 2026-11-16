@@ -20,12 +20,12 @@ for _, m in ipairs(FindAllOf("BP_BattleMap_C") or {}) do
   local d = (l.X-pl.X)^2 + (l.Y-pl.Y)^2 + (l.Z-pl.Z)^2
   if not bd or d < bd then best, bd = m, d end
 end
-local a = StaticConstructObject(cls, ex, FName("E33Coop_Trigger_" .. os.time()))
+local a = StaticConstructObject(cls, ex, FName("E33Lanes_Trigger_" .. os.time()))
 local s = a["Battle Start Params"]
 local row = s.EncounterRow_25_76E166214BC95AA2A6A68DAD97A47C62
 row.DataTable = dt
 row.RowName = FName(ENC)
-s.EnemyGlobalID_12_57EC6FC84879C6C042EC7BB68F507FE2 = FName("E33CoopTest")
+s.EnemyGlobalID_12_57EC6FC84879C6C042EC7BB68F507FE2 = FName("E33LanesTest")
 s.EngagementType_15_D00812C641AFF3AF663DC6B910763D7D = 0
 s.BattleMapBP_18_E90DB870407FE894CA7200B075D98B4A = best
 s.TransitionType_31_74930912436832AA7F5A1C8F139A7E9A = 0

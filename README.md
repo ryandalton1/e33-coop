@@ -1,3 +1,5 @@
+> **E33Lanes fork.** This is a fork of [kipavy/e33-coop](https://github.com/kipavy/e33-coop) that adds 3-player lane combat and, later, free roam. It installs as `E33Lanes` and never joins or updates against upstream installs. Fork docs: [docs/FORK.md](docs/FORK.md). The README below is upstream's.
+
 <div align="center">
 
 # Expedition 33 · Coop en ligne

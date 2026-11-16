@@ -1,6 +1,6 @@
-# E33 Coop - test a distance : remet la version du mod d'avant la derniere mise a jour a distance
+# E33 Lanes - test a distance : remet la version du mod d'avant la derniere mise a jour a distance
 # (remote\backup\<date>\, ecrite par apply-update.ps1). Utilisable a la main par l'ami :
-#   powershell -NoProfile -ExecutionPolicy Bypass -File "<jeu>\Sandfall\Binaries\Win64\ue4ss\Mods\E33Coop\remote\rollback.ps1"
+#   powershell -NoProfile -ExecutionPolicy Bypass -File "<jeu>\Sandfall\Binaries\Win64\ue4ss\Mods\E33Lanes\remote\rollback.ps1"
 # -Relaunch : relance le jeu par Steam ensuite (retour arriere automatique).
 param([switch]$Relaunch)
 $ErrorActionPreference = "Stop"
@@ -31,8 +31,8 @@ if (Test-Path $files) {
 $newList = Join-Path $bak "new.txt"
 if (Test-Path $newList) {
     foreach ($rel in Get-Content $newList) {
-        if (-not $rel -or $rel -match '\.\.' -or $rel -notmatch '^(dwmapi\.dll|ue4ss/UE4SS\.dll|ue4ss/Mods/E33Coop/.+)$') { continue }
-        if ($rel -match '^ue4ss/Mods/E33Coop/(remote|logs)/' -or $rel -eq 'ue4ss/Mods/E33Coop/remotetest.txt') { continue }
+        if (-not $rel -or $rel -match '\.\.' -or $rel -notmatch '^(dwmapi\.dll|ue4ss/UE4SS\.dll|ue4ss/Mods/E33Lanes/.+)$') { continue }
+        if ($rel -match '^ue4ss/Mods/E33Lanes/(remote|logs)/' -or $rel -eq 'ue4ss/Mods/E33Lanes/remotetest.txt') { continue }
         Remove-Item -LiteralPath (Join-Path $win64 ($rel.Replace('/', '\'))) -Force -ErrorAction SilentlyContinue
     }
 }

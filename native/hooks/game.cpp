@@ -276,7 +276,7 @@ bool trigger_battle(const std::wstring& encounter, const std::vector<std::wstrin
     }
 
     static std::atomic<int> seq{0};
-    const std::wstring obj_name = L"E33Coop_Trigger_" + std::to_wstring(++seq);
+    const std::wstring obj_name = L"E33Lanes_Trigger_" + std::to_wstring(++seq);
     FStaticConstructObjectParameters params{cls, executor};
     params.Name = FName(obj_name.c_str(), FNAME_Add);
     UObject* action = UObjectGlobals::StaticConstructObject(params);
@@ -292,7 +292,7 @@ bool trigger_battle(const std::wstring& encounter, const std::vector<std::wstrin
     void* row = row_prop->ContainerPtrToValuePtr<void>(base);
     bool ok = set_member_object(row_prop->GetStruct(), row, STR("DataTable"), dt) &&
               set_member_fname(row_prop->GetStruct(), row, STR("RowName"), encounter.c_str()) &&
-              set_member_fname(st, base, STR("EnemyGlobalID"), STR("E33CoopTest")) &&
+              set_member_fname(st, base, STR("EnemyGlobalID"), STR("E33LanesTest")) &&
               set_member_byte(st, base, STR("EngagementType"), 0) &&
               set_member_object(st, base, STR("BattleMapBP"), maps.front()) &&
               set_member_byte(st, base, STR("TransitionType"), 0) &&
@@ -484,7 +484,7 @@ bool start_gradient_parry(UObject* character)
 void clear_defense_lock(UObject* character)
 {
     ue::Call c(character, STR("ClearDefensiveMoveLock"));
-    if (c) c.set_string(STR("Reason"), STR("E33Coop")).invoke();
+    if (c) c.set_string(STR("Reason"), STR("E33Lanes")).invoke();
 }
 
 bool in_immunity(UObject* character)
@@ -700,7 +700,7 @@ bool make_snapshot(const std::wstring& slot, std::vector<uint8_t>& bytes, std::s
     auto* cls = static_cast<UClass*>(load_asset(STR("/Game/Gameplay/Save/SaveObjects/BP_SaveGameObject_V8.BP_SaveGameObject_V8_C")));
     if (!cls) { err = "BP_SaveGameObject_V8_C not loaded"; return false; }
     static std::atomic<int> seq{0};
-    const std::wstring name = L"E33Coop_Snapshot_" + std::to_wstring(++seq);
+    const std::wstring name = L"E33Lanes_Snapshot_" + std::to_wstring(++seq);
     FStaticConstructObjectParameters params{cls, gi()};
     params.Name = FName(name.c_str(), FNAME_Add);
     UObject* obj = UObjectGlobals::StaticConstructObject(params);
@@ -1052,7 +1052,7 @@ int passive_world_enemies()
         if (ue::get_bool(e, STR("EnableDetection"))) {
             ue::set_bool(e, STR("EnableDetection"), false);
             ue::Call lock(e, STR("AddAggroLock"));
-            if (lock) lock.set_fname(STR("LockName"), STR("E33Coop")).invoke();
+            if (lock) lock.set_fname(STR("LockName"), STR("E33Lanes")).invoke();
             remember(g_passive_detection, name);
         }
     }
@@ -1077,7 +1077,7 @@ int restore_world_enemies()
             }
         if (has(g_passive_detection, name)) {
             ue::Call unlock(e, STR("RemoveAggroLock"));
-            if (unlock) unlock.set_fname(STR("LockName"), STR("E33Coop")).invoke();
+            if (unlock) unlock.set_fname(STR("LockName"), STR("E33Lanes")).invoke();
             ue::set_bool(e, STR("EnableDetection"), true);
             touched = true;
         }
@@ -1331,7 +1331,7 @@ bool make_characters_blob(const std::wstring& slot, std::vector<uint8_t>& bytes,
     if (!create || !create.invoke()) { err = "CreateSaveGameDataFromGameState failed"; return false; }
     UObject* data = create.out_object(STR("SaveGameData"));
     if (!data) { err = "no save game data"; return false; }
-    UObject* obj = new_save_object(L"E33Coop_Build_", err);
+    UObject* obj = new_save_object(L"E33Lanes_Build_", err);
     if (!obj) return false;
     // Seulement les personnages : copie profonde de la map (même type des deux côtés), le reste de la save reste vide.
     FProperty* src = ue::prop(data, STR("CharactersCollection"));
@@ -1434,7 +1434,7 @@ bool apply_characters_blob(const std::wstring& slot, const std::vector<uint8_t>&
         fix_equipment(cd, name, p, dst);
         p->DestroyValue(dst);
         ue::Call d(cd, STR("DispatchModificationsIfPossible"));
-        if (d) d.set_string(STR("DebugReason"), STR("E33Coop build")).invoke();
+        if (d) d.set_string(STR("DebugReason"), STR("E33Lanes build")).invoke();
         applied.push_back(name);
     }
     return true;
@@ -1503,11 +1503,11 @@ bool economy_apply(const std::string& key, int64_t delta, std::string& err)
         if (delta > 0) {
             ue::Call c(inv, STR("ReceiveGold"));
             if (!c) { err = "ReceiveGold not found"; return false; }
-            return c.set_int(STR("GoldAmount"), delta).set_string(STR("Reason"), STR("E33Coop")).invoke();
+            return c.set_int(STR("GoldAmount"), delta).set_string(STR("Reason"), STR("E33Lanes")).invoke();
         }
         ue::Call c(inv, STR("TrySpendGold"));
         if (!c) { err = "TrySpendGold not found"; return false; }
-        c.set_int(STR("GoldAmount"), -delta).set_string(STR("Reason"), STR("E33Coop")).invoke();
+        c.set_int(STR("GoldAmount"), -delta).set_string(STR("Reason"), STR("E33Lanes")).invoke();
         if (!c.out_bool(STR("Success"))) { err = "not enough gold"; return false; }
         return true;
     }
@@ -1532,7 +1532,7 @@ bool economy_apply(const std::string& key, int64_t delta, std::string& err)
             UObject* inst = *static_cast<UObject**>(v);
             ue::Call c(inst, STR("ChangeLevel"));
             if (!c) { err = "ChangeLevel not found"; return false; }
-            return c.set_int(STR("NewLevel"), ue::get_int(inst, STR("CurrentLevel")) + delta).set_string(STR("DebugReason"), STR("E33Coop")).invoke();
+            return c.set_int(STR("NewLevel"), ue::get_int(inst, STR("CurrentLevel")) + delta).set_string(STR("DebugReason"), STR("E33Lanes")).invoke();
         }
         err = "item instance not found: " + id;
         return false;

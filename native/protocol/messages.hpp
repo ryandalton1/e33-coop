@@ -29,7 +29,7 @@ namespace e33::proto {
 //      Drapeau persistant posé par le pilote (FlagSet), réparation sur place de l'état d'exploration (WorldLeavesRequest,
 //      WorldLeaves), D38 : un pair plus ancien les ignore (pas de miroir de drapeaux ; réparation remplacée par l'instantané).
 inline constexpr uint16_t kProtocolVersion = 6;
-inline constexpr uint32_t kMagic = 0x43333345; // "E33C"
+inline constexpr uint32_t kMagic = 0x4C333345; // "E33L" (fork E33Lanes ; amont : 0x43333345 "E33C")
 
 enum class MsgType : uint16_t {
     Hello = 1, Welcome = 2, Reject = 3, Bye = 4, Ping = 5, Pong = 6,

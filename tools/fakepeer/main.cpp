@@ -1,4 +1,4 @@
-// fakepeer — faux pair hors jeu qui parle le protocole E33Coop.
+// fakepeer — faux pair hors jeu qui parle le protocole E33Lanes.
 //
 //   fakepeer client --connect 127.0.0.1:7777 [--script s.json] [--log f.jsonl] [--record r.jsonl] [--timeout 900]
 //     Faux client scripté face au vrai jeu hôte : se présente (Hello), joue les tours de ses héros

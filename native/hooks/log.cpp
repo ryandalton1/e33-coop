@@ -56,7 +56,7 @@ std::wstring mod_dir()
                        reinterpret_cast<LPCWSTR>(&mod_dir), &self);
     wchar_t buf[MAX_PATH * 2]{};
     GetModuleFileNameW(self, buf, static_cast<DWORD>(std::size(buf)));
-    // …/Mods/E33Coop/dlls/main.dll -> …/Mods/E33Coop
+    // …/Mods/E33Lanes/dlls/main.dll -> …/Mods/E33Lanes
     return std::filesystem::path(buf).parent_path().parent_path().wstring();
 }
 

@@ -23,8 +23,8 @@ namespace e33::builds {
 namespace {
 
 constexpr double kCheckPeriod = 2.0;
-constexpr const wchar_t* kOutSlot = L"e33coop/build_out";
-constexpr const wchar_t* kInSlot = L"e33coop/build_in";
+constexpr const wchar_t* kOutSlot = L"e33lanes/build_out";
+constexpr const wchar_t* kInSlot = L"e33lanes/build_in";
 
 uint64_t fnv64(const std::vector<uint8_t>& b)
 {

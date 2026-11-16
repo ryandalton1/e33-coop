@@ -1,12 +1,12 @@
-# E33 Coop - test a distance, cote hote (PC de Killian, jeu lance avec le mod). Voir docs/REMOTE-TEST.md.
-# Depose une commande dans ue4ss\Mods\E33Coop\remote\inbox\ ; le mod de l'hote l'envoie au joueur par Steam et ecrit
+# E33 Lanes - test a distance, cote hote (PC de Killian, jeu lance avec le mod). Voir docs/REMOTE-TEST.md.
+# Depose une commande dans ue4ss\Mods\E33Lanes\remote\inbox\ ; le mod de l'hote l'envoie au joueur par Steam et ecrit
 # la reponse (et les fichiers recus) dans remote\outbox\<id>\. Le jeu de l'hote doit tourner.
 #   remote.ps1 status
 #   remote.ps1 fetch-logs [-Count 2]          derniers journaux du mod, UE4SS.log, saves coop -> runs\remote\<id>\files
 # Chaque réponse est recopiée du dossier outbox du mod vers runs\remote\<id>\ (le dossier du mod est effacé par reset-env).
 #   remote.ps1 run <scenario.json> [-Wait]    scenario du test runner (relance du jeu de l'ami ; -Wait : attend le resultat puis rapatrie les journaux)
 #   remote.ps1 menu | load-snapshot | quit | restart
-#   remote.ps1 update <dossier artefact e33coop-mod | e33coop-player.zip>
+#   remote.ps1 update <dossier artefact e33lanes-mod | e33lanes-player.zip>
 #   remote.ps1 peer                            dernier « bonjour » recu du joueur (version, droits)
 param(
     [Parameter(Mandatory = $true, Position = 0)]
@@ -38,8 +38,8 @@ function Find-Game {
 
 if (-not $GameDir) { $GameDir = Find-Game }
 if (-not $GameDir) { throw "Jeu introuvable : -GameDir ""<...>\steamapps\common\Expedition 33""" }
-$mod = Join-Path $GameDir "Sandfall\Binaries\Win64\ue4ss\Mods\E33Coop"
-if (-not (Test-Path $mod)) { throw "Mod E33Coop absent : $mod" }
+$mod = Join-Path $GameDir "Sandfall\Binaries\Win64\ue4ss\Mods\E33Lanes"
+if (-not (Test-Path $mod)) { throw "Mod E33Lanes absent : $mod" }
 $remote = Join-Path $mod "remote"
 foreach ($d in "inbox", "outbox", "updates") { New-Item -ItemType Directory -Force (Join-Path $remote $d) | Out-Null }
 $utf8 = New-Object System.Text.UTF8Encoding $false
@@ -97,7 +97,7 @@ function Test-Dest([string]$p) {
     foreach ($part in $p.Split('/')) { if ($part -eq '.' -or $part -eq '..' -or $part.EndsWith('.') -or $part.EndsWith(' ')) { return $false } }
     $l = $p.ToLowerInvariant()
     if ($l -eq 'dwmapi.dll' -or $l -eq 'ue4ss/ue4ss.dll') { return $true }
-    if (-not $l.StartsWith('ue4ss/mods/e33coop/')) { return $false }
+    if (-not $l.StartsWith('ue4ss/mods/e33lanes/')) { return $false }
     $rest = $l.Substring(19)
     return -not ($rest -eq '' -or $rest.StartsWith('remote/') -or $rest.StartsWith('logs/') -or $rest -eq 'remotetest.txt')
 }
@@ -142,7 +142,7 @@ switch ($Command) {
         $src = (Resolve-Path $Path).Path
         $tmp = $null
         if ((Get-Item $src).PSIsContainer -eq $false) {
-            $tmp = Join-Path $env:TEMP ("e33coop-upd-" + [guid]::NewGuid().ToString("N"))
+            $tmp = Join-Path $env:TEMP ("e33lanes-upd-" + [guid]::NewGuid().ToString("N"))
             Expand-Archive $src $tmp
             $src = $tmp
         }

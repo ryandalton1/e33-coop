@@ -21,14 +21,14 @@ if ($Mode -eq "vanilla") {
     Start-Sleep 50
     & (Join-Path $repo "tools\dev\explore-battle.ps1") -Party "Maelle,Lune" -Hooks hook_qte_timing.lua
 } else {
-    if (-not $Package) { $Package = Join-Path $repo (".tools\artifacts\" + (Get-Content (Join-Path $repo ".tools\last_build")).Trim() + "\e33coop-mod") }
+    if (-not $Package) { $Package = Join-Path $repo (".tools\artifacts\" + (Get-Content (Join-Path $repo ".tools\last_build")).Trim() + "\e33lanes-mod") }
     & (Join-Path $repo "tools\reset-env\reset-env.ps1") -Package $Package -LuaMods @("E33Explore") | Out-Null
     $runner = Start-Process powershell -PassThru -WindowStyle Minimized -ArgumentList @("-NoProfile", "-File", "`"$(Join-Path $repo 'tools\run-scenario\run-scenario.ps1')`"", "p3_manual_host", "-NoReset")
     Write-Output "Game starting (coop host). Do not touch the PC until the battle starts."
     Start-Sleep 20
     $run = Get-ChildItem (Join-Path $repo "runs") -Directory -Filter "*p3_manual_host" | Sort-Object Name | Select-Object -Last 1
     for ($i = 0; $i -lt 90; $i++) {
-        $log = Join-Path $run.FullName "e33coop-host.jsonl"
+        $log = Join-Path $run.FullName "e33lanes-host.jsonl"
         if ((Test-Path $log) -and (Select-String -Path $log -Pattern '"ev":"turn_start"' -Quiet)) { break }
         Start-Sleep 2
     }

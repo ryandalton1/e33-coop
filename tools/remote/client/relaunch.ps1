@@ -1,5 +1,5 @@
-# E33 Coop - test a distance : relance du jeu par Steam (installe par install.ps1 -AllowRestart dans
-# ue4ss\Mods\E33Coop\remote\). Lance par le mod, cache. Aucun argument venant du reseau : seulement le PID du jeu.
+# E33 Lanes - test a distance : relance du jeu par Steam (installe par install.ps1 -AllowRestart dans
+# ue4ss\Mods\E33Lanes\remote\). Lance par le mod, cache. Aucun argument venant du reseau : seulement le PID du jeu.
 # Attend la fin du jeu, puis ouvre l'URL Steam fixe steam://rungameid/1903340 (options de lancement de l'ami).
 param([int]$GamePid = 0, [switch]$Detached)
 $ErrorActionPreference = "SilentlyContinue"

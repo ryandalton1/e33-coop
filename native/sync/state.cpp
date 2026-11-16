@@ -312,7 +312,7 @@ RepairStats repair(const proto::StateSync& local, const proto::StateSync& host)
         if (lu->shield != hu.shield) {
             ++r.shield;
             ue::Call c(st, STR("SetCurrentShieldPoints"));
-            if (c) c.set_int(STR("NewValue"), hu.shield).set_string(STR("DebugReason"), STR("E33Coop resync")).invoke();
+            if (c) c.set_int(STR("NewValue"), hu.shield).set_string(STR("DebugReason"), STR("E33Lanes resync")).invoke();
             else ue::set_int(st, STR("CurrentShieldPoints"), hu.shield);
         }
         if (!hu.mech.empty() && !same_mech(lu->mech, hu.mech)) {
@@ -327,7 +327,7 @@ RepairStats repair(const proto::StateSync& local, const proto::StateSync& host)
         if (lu->break_bar != hu.break_bar) {
             ++r.breakbar;
             ue::Call c(st, STR("SetCurrentBreakBarDamage"));
-            if (c) c.set_int(STR("NewValue"), hu.break_bar).set_object(STR("SourceCharacter"), nullptr).set_string(STR("Reason"), STR("E33Coop resync")).invoke();
+            if (c) c.set_int(STR("NewValue"), hu.break_bar).set_object(STR("SourceCharacter"), nullptr).set_string(STR("Reason"), STR("E33Lanes resync")).invoke();
             else ue::set_int(st, STR("StunBreakBarCurrent"), hu.break_bar);
         }
         // Buffs : par classe, on apparie les instances (triées), on corrige piles et durées, on retire les
@@ -377,7 +377,7 @@ RepairStats repair(const proto::StateSync& local, const proto::StateSync& host)
         ++r.gradient;
         ue::Call c(game::gradient_gauge(), STR("SetCurrentGradientGauge"));
         if (!c) ++r.failed;
-        else c.set_int(STR("NewCharges"), host.gradient_charges).set_double(STR("NewProgress"), host.gradient_progress).set_string(STR("Reason"), STR("E33Coop resync")).invoke();
+        else c.set_int(STR("NewCharges"), host.gradient_charges).set_double(STR("NewProgress"), host.gradient_progress).set_string(STR("Reason"), STR("E33Lanes resync")).invoke();
     }
     return r;
 }

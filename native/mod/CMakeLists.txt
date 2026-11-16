@@ -1,4 +1,4 @@
-set(TARGET E33Coop)
+set(TARGET E33Lanes)
 
 add_library(${TARGET} SHARED
     src/dllmain.cpp

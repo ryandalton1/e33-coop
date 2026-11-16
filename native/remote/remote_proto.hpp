@@ -82,9 +82,9 @@ std::optional<Packet> decode(const uint8_t* data, size_t len, std::string& err);
 // Chemin relatif sûr : séparateur '/', ni absolu, ni lecteur, ni '..', caractères simples, profondeur bornée.
 bool safe_relative(std::string_view path);
 // Mise à jour : destinations permises (relatives à Sandfall/Binaries/Win64) : dwmapi.dll, ue4ss/UE4SS.dll,
-// ue4ss/Mods/E33Coop/** sauf remote/, logs/ et remotetest.txt (la confiance ne se change pas à distance).
+// ue4ss/Mods/E33Lanes/** sauf remote/, logs/ et remotetest.txt (la confiance ne se change pas à distance).
 bool update_dest_allowed(std::string_view path);
-// Scénario reçu : JSON objet, "save" limité à e33coop/ ou e33coop-test/, étapes connues du runner, launch_args filtrés
+// Scénario reçu : JSON objet, "save" limité à e33lanes/ ou e33lanes-test/, étapes connues du runner, launch_args filtrés
 // (options -e33 connues ; -e33connect / -e33port retirées ; rôle client et transport Steam seulement). sanitized : le
 // scénario réécrit à exécuter ; notes : ce qui a été retiré.
 bool validate_scenario(std::string_view text, std::string& sanitized, std::string& err, std::vector<std::string>* notes = nullptr);

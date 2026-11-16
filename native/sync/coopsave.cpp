@@ -36,7 +36,7 @@ namespace e33::coopsave {
 
 namespace {
 
-constexpr const wchar_t* kScratchSlot = L"e33coop/copy-scratch";   // instantané local avant copie (dossier vidé par les tests)
+constexpr const wchar_t* kScratchSlot = L"e33lanes/copy-scratch";   // instantané local avant copie (dossier vidé par les tests)
 constexpr const wchar_t* kSaveMgr = L"/Game/Gameplay/Save/BP_SaveManager.BP_SaveManager_C:";
 
 struct Copy { std::wstring stem; std::string host; int64_t saved_at = 0; std::string level; };
@@ -70,8 +70,8 @@ struct S {
 void bump(const char* c, int n = 1) { if (s.bump) s.bump(c, n); }
 
 std::wstring sub_dir() { return cmdline::test_mode() ? L"test-copies" : L"copies"; }   // tests : jamais les vraies copies
-fs::path copies_dir() { return fs::path(game::saves_dir()) / L"e33coop" / sub_dir(); }
-std::wstring slot_of(const std::wstring& stem) { return L"e33coop/" + sub_dir() + L"/" + stem; }
+fs::path copies_dir() { return fs::path(game::saves_dir()) / L"e33lanes" / sub_dir(); }
+std::wstring slot_of(const std::wstring& stem) { return L"e33lanes/" + sub_dir() + L"/" + stem; }
 
 // Nom de fichier sûr (ASCII) à partir du nom affiché de l'hôte.
 std::wstring sanitize(const std::string& name)
@@ -276,12 +276,12 @@ void subscribe()
             log().write("coop_save_request", JsonObj().add("fn", ue::to_utf8(fn)).add("arg", str_of(str_param(ctx, f, STR("DebugReason")))));
         });
     }
-    // Filet : écriture d'un fichier de save hors e33coop pendant une partie coop -> objet de save retiré (l'écriture
+    // Filet : écriture d'un fichier de save hors e33lanes pendant une partie coop -> objet de save retiré (l'écriture
     // échoue sans rien toucher). Ne doit jamais arriver (autosave coupée) ; non observé en jeu à ce jour.
     bus.pre(std::wstring(kSaveMgr) + L"AsyncSaveGameToSlot", [](HookCtx& ctx, UFunction* f) {
         if (!s.coop_game) return;
         const std::string slot = str_of(str_param(ctx, f, STR("SlotName")));
-        if (slot.rfind("e33coop", 0) == 0) return;
+        if (slot.rfind("e33lanes", 0) == 0) return;
         UObject** obj = obj_param(ctx, f);
         if (obj) *obj = nullptr;
         bump("coop_personal_saves_blocked");
@@ -292,7 +292,7 @@ void subscribe()
     bus.pre(std::wstring(kSaveMgr) + L"LoadGameFromSaveFile", [](HookCtx& ctx, UFunction* f) {
         const std::string slot = str_of(str_param(ctx, f, STR("SlotName")));
         log().write("save_trace", JsonObj().add("fn", "LoadGameFromSaveFile").add("slot", slot));
-        if (slot.rfind("e33coop", 0) != 0) reset_coop_game("load personal save");
+        if (slot.rfind("e33lanes", 0) != 0) reset_coop_game("load personal save");
     });
     // Diagnostic (D33) : chemin de chargement du jeu (abandon après une défaite : quelle save est rechargée ?).
     for (const wchar_t* fn : {L"RequestLoadGame", L"RetrieveSaveDataFromSlotName", L"LoadGameFromSaveData", L"PrepareToLoadSaveGame"}) {

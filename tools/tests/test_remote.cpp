@@ -34,7 +34,7 @@ static void test_packets()
     r = roundtrip(y);
     CHECK(r && r->ok && !r->final && r->json == "{\"a\":1}");
 
-    Packet f; f.op = Op::File; f.req = 7; f.path = "logs/20261022-210000/e33coop-client.jsonl"; f.size = 10; f.offset = 4; f.data = {1, 2, 3, 4, 5, 6};
+    Packet f; f.op = Op::File; f.req = 7; f.path = "logs/20261022-210000/e33lanes-client.jsonl"; f.size = 10; f.offset = 4; f.data = {1, 2, 3, 4, 5, 6};
     f.sha256 = std::string(64, 'a');
     r = roundtrip(f);
     CHECK(r && r->path == f.path && r->size == 10 && r->offset == 4 && r->data == f.data && r->sha256 == f.sha256);
@@ -119,9 +119,9 @@ static void test_lobby()
 
 static void test_paths()
 {
-    CHECK(safe_relative("logs/20261022-210000/e33coop-client.jsonl"));
+    CHECK(safe_relative("logs/20261022-210000/e33lanes-client.jsonl"));
     CHECK(safe_relative("UE4SS.log"));
-    CHECK(safe_relative("saves/e33coop/host.sav"));
+    CHECK(safe_relative("saves/e33lanes/host.sav"));
     CHECK(!safe_relative(""));
     CHECK(!safe_relative("/etc/passwd"));
     CHECK(!safe_relative("../x"));
@@ -138,18 +138,18 @@ static void test_paths()
 
     CHECK(update_dest_allowed("dwmapi.dll"));
     CHECK(update_dest_allowed("ue4ss/UE4SS.dll"));
-    CHECK(update_dest_allowed("ue4ss/Mods/E33Coop/dlls/main.dll"));
-    CHECK(update_dest_allowed("ue4ss/Mods/E33Coop/enabled.txt"));
-    CHECK(!update_dest_allowed("ue4ss/Mods/E33Coop/remotetest.txt"));
-    CHECK(!update_dest_allowed("UE4SS/mods/e33coop/REMOTETEST.TXT"));
-    CHECK(!update_dest_allowed("ue4ss/Mods/E33Coop/remote/relaunch.ps1"));
+    CHECK(update_dest_allowed("ue4ss/Mods/E33Lanes/dlls/main.dll"));
+    CHECK(update_dest_allowed("ue4ss/Mods/E33Lanes/enabled.txt"));
+    CHECK(!update_dest_allowed("ue4ss/Mods/E33Lanes/remotetest.txt"));
+    CHECK(!update_dest_allowed("UE4SS/mods/e33lanes/REMOTETEST.TXT"));
+    CHECK(!update_dest_allowed("ue4ss/Mods/E33Lanes/remote/relaunch.ps1"));
     CHECK(!update_dest_allowed("UE4SS/Mods/E33COOP/Remote/apply-update.ps1"));
-    CHECK(!update_dest_allowed("ue4ss/Mods/E33Coop/logs/x.jsonl"));
+    CHECK(!update_dest_allowed("ue4ss/Mods/E33Lanes/logs/x.jsonl"));
     CHECK(!update_dest_allowed("ue4ss/Mods/Other/main.dll"));
     CHECK(!update_dest_allowed("ue4ss/UE4SS-settings.ini"));
     CHECK(!update_dest_allowed("SandFall-Win64-Shipping.exe"));
-    CHECK(!update_dest_allowed("ue4ss/Mods/E33Coop/../../../x.dll"));
-    CHECK(!update_dest_allowed("ue4ss/Mods/E33Coop"));
+    CHECK(!update_dest_allowed("ue4ss/Mods/E33Lanes/../../../x.dll"));
+    CHECK(!update_dest_allowed("ue4ss/Mods/E33Lanes"));
 
     CHECK(safe_id("20261022-210000-status"));
     CHECK(!safe_id("../x"));
@@ -174,10 +174,10 @@ static void test_scenario()
     CHECK(v["join"].as_bool() && v["expect"]["desyncs"].as_string() == "0" && v["explore"][0]["s"].as_int() == 5);
     CHECK(notes.size() >= 3);
 
-    CHECK(validate_scenario(R"({"save":"e33coop/host","encounter":"X"})", out, err));
-    CHECK(validate_scenario(R"({"save":"e33coop-test/TEST_B","encounter":"X"})", out, err));
+    CHECK(validate_scenario(R"({"save":"e33lanes/host","encounter":"X"})", out, err));
+    CHECK(validate_scenario(R"({"save":"e33lanes-test/TEST_B","encounter":"X"})", out, err));
     CHECK(!validate_scenario(R"({"save":"76561198045698677/EXPEDITION_0","encounter":"X"})", out, err));
-    CHECK(!validate_scenario(R"({"save":"e33coop/../76561198045698677/EXPEDITION_0"})", out, err));
+    CHECK(!validate_scenario(R"({"save":"e33lanes/../76561198045698677/EXPEDITION_0"})", out, err));
     CHECK(!validate_scenario(R"({"save":"C:/x"})", out, err));
     CHECK(!validate_scenario(R"({"join":true,"launch_args":["-e33role=host"]})", out, err));
     CHECK(!validate_scenario(R"({"join":true,"launch_args":["-e33transport=udp"]})", out, err));

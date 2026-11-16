@@ -1,5 +1,5 @@
-# E33 Coop - test a distance : installe une mise a jour du mod recue de l'hote de confiance (installe par
-# install.ps1 -AllowUpdate dans ue4ss\Mods\E33Coop\remote\). Lance par le mod, cache, apres verification des
+# E33 Lanes - test a distance : installe une mise a jour du mod recue de l'hote de confiance (installe par
+# install.ps1 -AllowUpdate dans ue4ss\Mods\E33Lanes\remote\). Lance par le mod, cache, apres verification des
 # empreintes. Aucun argument venant du reseau : seulement le PID du jeu ; ne lit que remote\staging\.
 #  1. attend la fin du jeu ;
 #  2. reverifie chaque fichier (liste de destinations permises, SHA-256 du manifeste) ;
@@ -35,7 +35,7 @@ function Test-Dest([string]$p) {
     foreach ($part in $parts) { if ($part -eq '.' -or $part -eq '..' -or $part.EndsWith('.') -or $part.EndsWith(' ') -or $part.StartsWith(' ')) { return $false } }
     $l = $p.ToLowerInvariant()
     if ($l -eq 'dwmapi.dll' -or $l -eq 'ue4ss/ue4ss.dll') { return $true }
-    if (-not $l.StartsWith('ue4ss/mods/e33coop/')) { return $false }
+    if (-not $l.StartsWith('ue4ss/mods/e33lanes/')) { return $false }
     $rest = $l.Substring(19)
     if ($rest -eq '' -or $rest.StartsWith('remote/') -or $rest.StartsWith('logs/') -or $rest -eq 'remotetest.txt' -or $rest -eq 'remote' -or $rest -eq 'logs') { return $false }
     return $true
@@ -118,7 +118,7 @@ Log "relaunched, waiting for mod_init"
 $deadline = $t0.AddMinutes(3)
 while ((Get-Date) -lt $deadline) {
     Start-Sleep -Seconds 5
-    $fresh = Get-ChildItem (Join-Path $mod "logs") -Recurse -Filter "e33coop-*.jsonl" -ErrorAction SilentlyContinue | Where-Object { $_.LastWriteTime -gt $t0 }
+    $fresh = Get-ChildItem (Join-Path $mod "logs") -Recurse -Filter "e33lanes-*.jsonl" -ErrorAction SilentlyContinue | Where-Object { $_.LastWriteTime -gt $t0 }
     foreach ($f in $fresh) {
         if (Select-String -LiteralPath $f.FullName -SimpleMatch '"ev":"mod_init"' -Quiet) { Log "ok: mod_init in $($f.FullName)"; exit 0 }
     }
