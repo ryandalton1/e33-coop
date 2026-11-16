@@ -8,7 +8,7 @@ param(
     [string]$Package = "",
     [int]$TimeoutSec = 900,
     [switch]$NoReset,
-    [string]$GameDir = "E:\SteamLibrary\steamapps\common\Expedition 33",
+    [string]$GameDir = "C:\Program Files (x86)\Steam\steamapps\common\Expedition 33",
     [string]$ExtraArgs = ""
 )
 $ErrorActionPreference = "Stop"

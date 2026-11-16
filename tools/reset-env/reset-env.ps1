@@ -5,7 +5,7 @@
 #  - restaure les saves de test dans SaveGames\e33lanes-test\ (hors Steam Cloud)
 #  - réinstalle UE4SS + nos mods dans le dossier Win64 du jeu (seul dossier modifié)
 param(
-    [string]$GameDir = "E:\SteamLibrary\steamapps\common\Expedition 33",
+    [string]$GameDir = "C:\Program Files (x86)\Steam\steamapps\common\Expedition 33",
     [string]$Package = "",                 # dossier d'un artefact CI (dwmapi.dll, ue4ss\...) ; vide = UE4SS officiel + Lua seulement
     [string[]]$LuaMods = @("E33Explore"),
     [switch]$KeepGameRunning
@@ -13,7 +13,8 @@ param(
 $ErrorActionPreference = "Stop"
 $repo = (Resolve-Path "$PSScriptRoot\..\..").Path
 $savesRoot = Join-Path $env:LOCALAPPDATA "Sandfall\Saved\SaveGames"
-$backupRoot = "C:\Users\Killian\dev\e33-coop-backups"
+$backupRoot = Join-Path $env:USERPROFILE "e33lanes-backups"
+New-Item -ItemType Directory -Force $backupRoot | Out-Null
 $testSavesSrc = Join-Path $repo ".tools\testsaves"
 $testSavesDst = Join-Path $savesRoot "e33lanes-test"
 

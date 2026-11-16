@@ -1,7 +1,7 @@
 ﻿# Installe UE4SS (build épinglé) + nos mods Lua dans le dossier Win64 du jeu.
 # Ne touche qu'aux dossiers autorisés : Win64\dwmapi.dll, Win64\ue4ss\.
 param(
-    [string]$GameDir = "E:\SteamLibrary\steamapps\common\Expedition 33",
+    [string]$GameDir = "C:\Program Files (x86)\Steam\steamapps\common\Expedition 33",
     [string]$Ue4ssDir = "$PSScriptRoot\..\..\.tools\dl\ue4ss-1181\std",
     [string[]]$LuaMods = @("E33Explore"),
     [hashtable]$Settings = @{}

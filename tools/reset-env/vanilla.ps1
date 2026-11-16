@@ -3,7 +3,7 @@
 #  - retire UE4SS (dwmapi.dll + dossier ue4ss) du dossier Win64 : jeu vanilla
 #  - remet ses saves perso en écriture
 # reset-env.ps1 (lancé par run-scenario) refait une copie des saves et les repasse en lecture seule.
-param([string]$GameDir = "E:\SteamLibrary\steamapps\common\Expedition 33")
+param([string]$GameDir = "C:\Program Files (x86)\Steam\steamapps\common\Expedition 33")
 $ErrorActionPreference = "Stop"
 function Log($m) { Write-Output "[vanilla] $m" }
 
