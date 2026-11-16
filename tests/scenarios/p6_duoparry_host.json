@@ -1,7 +1,7 @@
 {
   "name": "p6_duoparry_host",
   "description": "Parade en duo : hôte réel (Maelle, Lune) + faux client (Verso). Tout le monde pare tout ; une attaque qui touche des héros des deux joueurs, toute parée, doit donner +1 PA à chacun (GainAP), un toast « Parade en duo ! » et aucun écart. L'enregistrement du faux client (recording-fakeclient.jsonl) devient tests/recordings/p6_duoparry_host.jsonl, rejoué par p6_duoparry_client.",
-  "save": "e33coop-test/TEST_B",
+  "save": "e33lanes-test/TEST_B",
   "encounter": "SM_Eveque*1",
   "party": ["Verso", "Maelle", "Lune"],
   "timeout_s": 900,

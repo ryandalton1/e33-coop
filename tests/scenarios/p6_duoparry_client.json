@@ -1,7 +1,7 @@
 {
   "name": "p6_duoparry_client",
   "description": "Parade en duo côté client : vrai jeu client (Verso) face au faux hôte qui rejoue p6_duoparry_host. Le client calcule le même bonus que l'hôte au même moment (début du tour suivant, avant la photo d'état) : PA identiques sans correction.",
-  "save": "e33coop-test/TEST_B",
+  "save": "e33lanes-test/TEST_B",
   "encounter": "SM_Eveque*1",
   "party": ["Verso", "Maelle", "Lune"],
   "timeout_s": 900,

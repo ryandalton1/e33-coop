@@ -1,7 +1,7 @@
 {
   "name": "p3_freeaim_client_turndep",
   "description": "Phase 3 : visée libre côté client. Le client joue Verso : il vise le Lancelier et tire 3 fois (vrais tirs du jeu), puis attaque ; il doit rester identique à l'hôte enregistré (mêmes impacts, mêmes dégâts).",
-  "save": "e33coop-test/TEST_B",
+  "save": "e33lanes-test/TEST_B",
   "encounter": "SM_Lancelier_Alpha",
   "party": ["Verso", "Lune"],
   "timeout_s": 600,

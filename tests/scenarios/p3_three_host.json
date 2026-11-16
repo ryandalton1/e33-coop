@@ -1,7 +1,7 @@
 {
   "name": "p3_three_host",
   "description": "Phase 3 : 3 joueurs. Hôte réel (Maelle) + 2 faux clients (Verso : compétences avec QTE, objet ; Lune : attaques). L'hôte exécute les actions de chaque client, demande chaque défense au bon joueur et relaie tout aux autres.",
-  "save": "e33coop-test/TEST_B",
+  "save": "e33lanes-test/TEST_B",
   "encounter": "SM_Lancelier_Alpha",
   "party": ["Verso", "Maelle", "Lune"],
   "timeout_s": 700,

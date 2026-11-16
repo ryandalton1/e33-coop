@@ -1,7 +1,7 @@
 {
   "name": "p3_manual_host",
   "description": "Validation en jeu (Killian) : tu es l'hôte et tu joues toi-même Lune et Maelle (actions, QTE, parades). Le faux client joue Verso : visée libre (3 tirs puis attaque), Combo1 (QTE parfait puis raté), attaques ; il pare un coup sur deux. Ses actions apparaissent chez toi avec ~1 s de décalage.",
-  "save": "e33coop-test/TEST_B",
+  "save": "e33lanes-test/TEST_B",
   "encounter": "SM_Lancelier_Alpha",
   "party": ["Verso", "Maelle", "Lune"],
   "manual": true,

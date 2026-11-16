@@ -1,7 +1,7 @@
 {
   "name": "p7_menumirror_host",
   "description": "Miroir des menus de combat, côté observateur (hôte). Le faux client (Verso) fouille sa roue pendant 12 s avant chaque action (MenuState) : compétences (colonne gauche, survol, colonne droite), objets, gradient, retours, puis le choix de l'action, son ciblage annulé une fois puis repris, le curseur sur chaque cible (objet : Lune, Verso, Lune, Verso), enfin l'action (ActionCommand, inchangée). Ses actions : Combo1, objet d'énergie sur Verso, attaque, visée libre (2 tirs) puis attaque. L'hôte doit voir ces menus s'ouvrir dans l'interface du jeu (captures chaque seconde), sans ligne « FakeClient prépare … » (sauf pendant la visée libre), et le joueur d'ici ne doit rien pouvoir faire : touches et clics injectés pendant chaque tour de Verso (spam_local_input), aucune fuite.",
-  "save": "e33coop-test/TEST_B",
+  "save": "e33lanes-test/TEST_B",
   "encounter": "SM_Lancelier_Alpha",
   "party": ["Verso", "Lune"],
   "timeout_s": 900,

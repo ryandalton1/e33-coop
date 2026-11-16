@@ -1,7 +1,7 @@
 {
   "name": "p4_session_host",
   "description": "Phase 4 : vrai jeu hôte (pilote) face au faux client qui rejoint la partie. L'hôte envoie l'instantané de sa partie au point sûr, marche, lance un combat avec un ennemi du monde (fuite), change de niveau (camp), parle à Lune et choisit une réponse. Le faux client vérifie l'instantané (hash, en-tête GVAS) et compte les messages d'exploration. Produit l'enregistrement rejoué par p4_session_client.",
-  "save": "e33coop-test/TEST_B",
+  "save": "e33lanes-test/TEST_B",
   "timeout_s": 900,
   "max_turns": 10,
   "shots_every_s": 10,

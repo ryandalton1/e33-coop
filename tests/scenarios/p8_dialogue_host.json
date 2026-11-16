@@ -1,7 +1,7 @@
 {
   "name": "p8_dialogue_host",
   "description": "Dialogue de zone côté hôte/pilote (D24) : partie chargée depuis l'instantané réel p8_prologue_snapshot (Lumière, avant le grappin). Après l'entrée du faux client, le pilote est posé avant la zone du dialogue de Maelle et y marche ; l'hôte doit publier le dialogue et sa cause (SceneStart, dialogue, zone), puis répond (choix 1) et joue le duel qui suit. Produit l'enregistrement rejoué par p8_dialogue_sync_client.",
-  "save": "e33coop-test/p8_prologue_snapshot",
+  "save": "e33lanes-test/p8_prologue_snapshot",
   "timeout_s": 700,
   "shots_every_s": 5,
   "actions": [{ "type": "attack" }],

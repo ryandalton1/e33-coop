@@ -1,7 +1,7 @@
 {
   "name": "p8_turnlag_host",
   "description": "Démarrage synchronisé des tours ennemis (D28, par défaut) : même combat que p8_turnlag_before_host (faux client avec Verso et Lune, réseau simulé, chaque tour ennemi commencé 1 s après l'hôte : --turn-lag 1.0). L'hôte retient le tour ennemi, jeu animé, jusqu'au StateHash du client (~1 s, coop_turn_aligned) ; ses attentes de défense (image figée) tombent à un aller-retour : critère D22 « coop_wait_long defense > 300 ms » -> defense_wait_max_ms < 300 et aucune attente de défense de plus de 250 ms. Vérifie aussi que le combat se déroule normalement (fin, actions des héros du client, pas de gel).",
-  "save": "e33coop-test/TEST_B",
+  "save": "e33lanes-test/TEST_B",
   "encounter": "SM_Lancelier_Alpha",
   "party": ["Verso", "Maelle", "Lune"],
   "timeout_s": 700,

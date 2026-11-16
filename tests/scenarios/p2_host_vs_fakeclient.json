@@ -1,7 +1,7 @@
 ﻿{
   "name": "p2_host_vs_fakeclient",
   "description": "Phase 2 : vrai jeu hÃ´te face au faux client. Le hÃ©ros de l'emplacement 0 appartient au client : l'hÃ´te attend son ActionCommand Ã  chaque tour de ce hÃ©ros et lui demande le rÃ©sultat de chaque coup reÃ§u (parade puis Ã©chec en alternance).",
-  "save": "e33coop-test/TEST_B",
+  "save": "e33lanes-test/TEST_B",
   "encounter": "SM_Lancelier_Alpha",
   "timeout_s": 600,
   "wait_players": 1,

@@ -1,7 +1,7 @@
 {
   "name": "solo_parry_basic",
   "description": "Combat solo simple : attaques de base ; sur chaque coup reçu, défense réussie (parade ou saut selon l'attaque) puis ratée en alternance.",
-  "save": "e33coop-test/TEST_A",
+  "save": "e33lanes-test/TEST_A",
   "encounter": "L_LumiereCitizenFleuret_Male*1",
   "timeout_s": 600,
   "action_delay_s": 1.5,

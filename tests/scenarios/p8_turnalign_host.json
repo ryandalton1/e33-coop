@@ -1,7 +1,7 @@
 {
   "name": "p8_turnalign_host",
   "description": "Essai -e33turnalign=1 (attente de la parade de l'autre sans figer l'image) : l'hôte retient chaque tour ennemi, jeu animé (dépendance de début de tour), jusqu'à ce que le faux client (Verso et Lune, réseau simulé) l'ait commencé chez lui (StateHash du tour), 4 s au plus. Vérifie que le combat se déroule normalement (pas d'action ennemie en double, fin de combat) et mesure l'attente des tours (turn_align_max_ms) et des défenses (defense_wait_max_ms). Le gain réel (l'hôte n'est plus en avance sur le client) ne se mesure qu'à deux PC : le faux client répond aux défenses dès la demande.",
-  "save": "e33coop-test/TEST_B",
+  "save": "e33lanes-test/TEST_B",
   "encounter": "SM_Lancelier_Alpha",
   "party": ["Verso", "Maelle", "Lune"],
   "timeout_s": 700,

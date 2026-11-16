@@ -1,7 +1,7 @@
 {
   "name": "p5_hostlost_client",
   "description": "Phase 5 : l'hôte disparaît en plein combat (jeu planté, réseau coupé). Le faux hôte rejoue p2_host_session jusqu'au tour 3 puis se tait : au bout de 15 s le client affiche « Connexion à l'hôte perdue », rend ses entrées et revient au menu principal.",
-  "save": "e33coop-test/TEST_B",
+  "save": "e33lanes-test/TEST_B",
   "encounter": "SM_Lancelier_Alpha",
   "timeout_s": 600,
   "max_turns": 60,

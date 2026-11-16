@@ -1,7 +1,7 @@
 {
   "name": "p8_prologue_host",
   "description": "Pendant du duel du prologue côté hôte (essai à deux PC du 2026-10-22) : l'hôte lance un combat pendant que le client est dans une scène à lui (dialogue de 25 s qui commence à la réception du BattleStart ; il n'entre dans le combat qu'à la fin). L'hôte n'est jamais tenu par la barrière narrative pendant le combat ; son premier tour attend le client (raison affichée : en pleine conversation, sans délai d'inactivité) puis repart dès son BattleReady. Réseau simulé chez le faux client.",
-  "save": "e33coop-test/TEST_B",
+  "save": "e33lanes-test/TEST_B",
   "encounter": "SM_Lancelier_Alpha",
   "party": ["Verso", "Maelle", "Lune"],
   "timeout_s": 700,

@@ -1,7 +1,7 @@
 {
   "name": "p9_battle_keys_old_client",
   "description": "Parade du client à la manette (essai à deux PC du 2026-10-24 : RB et RT sans effet, B et le clavier oui). Vrai jeu client (Maelle), suiveur en exploration (contextes de déplacement retirés par le mod), face au faux hôte de p3_party_client. Le mod rendait ces contextes au début du combat, où le jeu les retire. Avant (ancien comportement, -e33locomotioninbattle=1) : RB va à IMC_Locomotion_Default_ALS (HitInWorldAction, priorité 1) au lieu de la défense (priorité 0) ; E (clavier) reste à la défense.",
-  "save": "e33coop-test/TEST_B",
+  "save": "e33lanes-test/TEST_B",
   "encounter": "SM_Lancelier_Alpha",
   "party": ["Verso", "Maelle", "Lune"],
   "setup": { "Maelle": { "dead": true }, "Verso": { "dead": true } },

@@ -1,7 +1,7 @@
 {
   "name": "p7_intent_client",
   "description": "Aperçu et caméra de visée libre, côté propriétaire (client). Comme p3_freeaim_client : le client joue Verso, vise le Lancelier et tire 3 fois ; il doit publier sa caméra (AimView) et l'aperçu « visée libre » (IntentPreview), sans changer le rejeu (mêmes impacts que l'hôte enregistré). Le faux hôte ignore ces messages.",
-  "save": "e33coop-test/TEST_B",
+  "save": "e33lanes-test/TEST_B",
   "encounter": "SM_Lancelier_Alpha",
   "party": ["Verso", "Lune"],
   "timeout_s": 600,

@@ -1,7 +1,7 @@
 {
   "name": "p6_coopsave_host",
-  "description": "Héberger depuis la copie coop (D15) : TEST_B est installée comme copie coop de « TestHost » (SaveGames\\e33coop\\test-copies), puis chargée comme avec F10 au menu principal (rôle hôte, autosave coupée). Le faux client rejoint : l'instantané envoyé remplace la copie. Le pion marche, puis la copie est refaite au calme (-e33copyevery=20). Aucune écriture dans les saves perso.",
-  "save": "e33coop-test/TEST_B",
+  "description": "Héberger depuis la copie coop (D15) : TEST_B est installée comme copie coop de « TestHost » (SaveGames\\e33lanes\\test-copies), puis chargée comme avec F10 au menu principal (rôle hôte, autosave coupée). Le faux client rejoint : l'instantané envoyé remplace la copie. Le pion marche, puis la copie est refaite au calme (-e33copyevery=20). Aucune écriture dans les saves perso.",
+  "save": "e33lanes-test/TEST_B",
   "host_copy": true,
   "timeout_s": 600,
   "actions": [{ "type": "flee" }],

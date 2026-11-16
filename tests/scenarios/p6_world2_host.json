@@ -1,7 +1,7 @@
 {
   "name": "p6_world2_host",
   "description": "Phase 6 (bugs du premier essai à deux PC, suite) : deux combats de la carte dans la même session, avec réattribution entre les deux. Save TEST_B ; équipe Maelle, Verso, Monoco après l'instantané. Combat 1 (attaque surprise) : Maelle passe son tour puis attaque, Verso au faux client. Puis F6 donne Monoco au faux client. Combat 2 (engagement normal) contre l'ennemi le plus proche. Produit l'enregistrement rejoué par p6_world2_client.",
-  "save": "e33coop-test/TEST_B",
+  "save": "e33lanes-test/TEST_B",
   "timeout_s": 900,
   "max_turns": 60,
   "shots_every_s": 6,

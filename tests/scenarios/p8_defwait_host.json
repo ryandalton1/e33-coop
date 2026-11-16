@@ -1,7 +1,7 @@
 {
   "name": "p8_defwait_host",
   "description": "Mesure de l'attente de la parade d'un autre joueur (point ouvert : « peut figer jusqu'à 3 s »). Le faux client possède Verso et Lune, réseau simulé (latence 40 ms, gigue 20 ms, pertes, pointes) : l'hôte fige son image le temps d'un aller-retour à chaque coup reçu par leurs héros (waited_ms de coop_defense_imposed, defense_wait_max_ms). Une défense sur 4 arrive 4 s après la demande (propriétaire en retard, pire cas) : délai de 3 s atteint, échec imposé (l'état de l'hôte fait foi).",
-  "save": "e33coop-test/TEST_B",
+  "save": "e33lanes-test/TEST_B",
   "encounter": "SM_Lancelier_Alpha",
   "party": ["Verso", "Maelle", "Lune"],
   "timeout_s": 700,

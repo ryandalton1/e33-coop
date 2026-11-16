@@ -23,6 +23,7 @@
 #include "../../sync/coop.hpp"
 #include "../../testrunner/runner.hpp"
 #include "../../sync/update.hpp"
+#include "../../sync/spike_s7.hpp"
 #include "../../ui/options.hpp"
 #include "../../ui/owners_ui.hpp"
 
@@ -95,6 +96,7 @@ public:
         subscribe_logging_hooks();
         e33::coop::init();          // avant le test runner : ses hooks de début de tour fixent les propriétaires
         e33::testrunner::init();
+        e33::spike_s7::init();     // fork E33Lanes : spike S7 (-e33s7=..., désactivé par défaut)
         init_at_ = std::chrono::steady_clock::now();   // rien d'autre avant kStartupQuiet : voir on_tick
 
         Hook::RegisterEngineTickPreCallback(
@@ -135,6 +137,7 @@ private:
             { e33::prof::Scope p("options"); e33::options::tick(dt); }
             { e33::prof::Scope p("owners_ui"); e33::owners_ui::tick(dt); }
             { e33::prof::Scope p("testrunner"); e33::testrunner::tick(dt); }
+            e33::spike_s7::tick(dt);
             { e33::prof::Scope p("remote"); e33::remote::tick(dt); }
             e33::prof::frame_end();
         } catch (const std::exception& ex) {

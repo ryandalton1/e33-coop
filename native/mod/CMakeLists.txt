@@ -33,6 +33,7 @@ add_library(${TARGET} SHARED
     ../sync/state.cpp
     ../sync/presence.cpp
     ../sync/update.cpp
+    ../sync/spike_s7.cpp
     ../protocol/messages.cpp
     ../net/link.cpp
     ../net/udp.cpp

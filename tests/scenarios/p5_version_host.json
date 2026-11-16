@@ -1,7 +1,7 @@
 {
   "name": "p5_version_host",
   "description": "Phase 5 : refus de version. Pendant qu'un faux client normal joue un combat court, quatre autres se présentent avec un écart : version du mod, build du jeu, liste des mods de gameplay, version du protocole (paquets d'une version précédente). L'hôte les refuse tous avec un message qui dit ce qui diffère (le dernier reçoit simplement la version de l'hôte, que son jeu affiche), sans leur donner de place ni gêner la partie.",
-  "save": "e33coop-test/TEST_B",
+  "save": "e33lanes-test/TEST_B",
   "encounter": "SM_Lancelier*1",
   "timeout_s": 600,
   "wait_players": 1,

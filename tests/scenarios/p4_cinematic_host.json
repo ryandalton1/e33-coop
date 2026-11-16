@@ -1,7 +1,7 @@
 {
   "name": "p4_cinematic_host",
   "description": "Phase 4 : cinématique avec barrière. Save TEST_A (Lumière, acte 3) : l'hôte lance l'action de la zone du boss Renoir (vraie cinématique), la regarde jusqu'au bout (≈ 5 min : impossible à passer, jamais vue dans cette save) ; le faux client la « regarde » 10 s de plus. L'hôte doit se mettre en pause (barrière) à la fin de sa cinématique ; le test s'arrête au début du combat de boss qui suit (le jeu lance ce combat malgré la pause : limite connue). Produit l'enregistrement rejoué par p4_cinematic_client.",
-  "save": "e33coop-test/TEST_A",
+  "save": "e33lanes-test/TEST_A",
   "timeout_s": 900,
   "end_on_battle": true,
   "shots_every_s": 5,

@@ -1,7 +1,7 @@
 {
   "name": "p3_party_host",
   "description": "Phase 3 : équipe de 3 (Verso, Lune : hôte ; Maelle à 1 PV : faux client). Ciblage aléatoire des ennemis synchronisé, Maelle morte dès le tour 1 (réglage initial identique sur chaque instance), Maelle se relève seule (pictos), Verso aussi mort au tour 1 et réanimé par Lune (teinte de résurrection), fin de combat et récompenses. Produit l'enregistrement rejoué par p3_party_client.",
-  "save": "e33coop-test/TEST_B",
+  "save": "e33lanes-test/TEST_B",
   "encounter": "SM_Lancelier_Alpha",
   "party": ["Verso", "Maelle", "Lune"],
   "setup": { "Maelle": { "dead": true }, "Verso": { "dead": true } },

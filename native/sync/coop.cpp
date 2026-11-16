@@ -940,6 +940,7 @@ void set_local_aim(const double* point)
 }
 const std::map<std::string, int>& counters() { return s.counters; }
 const char* mod_version() { return kModVersion; }
+void add_counter(const std::string& name, int n) { s.counters[name] += n; }
 int counter(const std::string& name)
 {
     auto it = s.counters.find(name);

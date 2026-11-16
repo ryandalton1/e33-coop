@@ -1,7 +1,7 @@
 {
   "name": "p3_actions_client",
   "description": "Phase 3 : vrai jeu client face au faux hôte qui rejoue p3_actions_host. Le client joue Verso (mêmes actions que le faux client, QTE joués par de vrais appuis), rejoue les actions de Lune reçues de l'hôte avec ses résultats de QTE, et doit rester identique à l'hôte sans correction.",
-  "save": "e33coop-test/TEST_B",
+  "save": "e33lanes-test/TEST_B",
   "encounter": "SM_Lancelier_Alpha",
   "party": ["Verso", "Lune"],
   "timeout_s": 600,

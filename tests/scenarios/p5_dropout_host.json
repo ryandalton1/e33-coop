@@ -1,7 +1,7 @@
 {
   "name": "p5_dropout_host",
   "description": "Phase 5 : départs en plein combat, 3 joueurs. Hôte réel (Maelle) + 2 faux clients. Le client de Verso se tait d'un coup au début du tour de Verso (jeu fermé, réseau coupé) : au bout de 15 s l'hôte le déclare parti, reprend Verso et joue ce tour lui-même. Le client de Lune quitte proprement (Bye) au tour 8 : l'hôte reprend Lune. Le premier revient 25 s plus tard (nouveau processus, « rejoindre ») : il attend la fin du combat, reçoit l'instantané et rentre dans la partie.",
-  "save": "e33coop-test/TEST_B",
+  "save": "e33lanes-test/TEST_B",
   "encounter": "SM_Lancelier_Alpha",
   "party": ["Verso", "Maelle", "Lune"],
   "timeout_s": 900,

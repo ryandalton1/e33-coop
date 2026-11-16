@@ -1,7 +1,7 @@
 {
   "name": "p8_cutscene_host",
   "description": "Cinématique de Sophie (Lumière, prologue) côté hôte/pilote : partie chargée depuis l'instantané réel p8_cutscene_snapshot (2026-10-22, avant la corde). Après l'entrée du faux client, le pilote est posé au bas de la corde et marche vers la zone qui déclenche la scène ; l'hôte doit publier la scène et sa cause (SceneStart : zone, game action), puis son passage (SceneSkip). Produit l'enregistrement rejoué par p8_cutscene_sync_client.",
-  "save": "e33coop-test/p8_cutscene_snapshot",
+  "save": "e33lanes-test/p8_cutscene_snapshot",
   "timeout_s": 600,
   "shots_every_s": 5,
   "explore": [

@@ -1,7 +1,7 @@
 {
   "name": "p5_hostbye_client",
   "description": "Phase 5 : l'hôte quitte la partie en plein combat. Le faux hôte rejoue p2_host_session jusqu'au tour 3, puis envoie Bye : le client affiche « L'hôte a quitté la partie », rend ses entrées et revient au menu principal.",
-  "save": "e33coop-test/TEST_B",
+  "save": "e33lanes-test/TEST_B",
   "encounter": "SM_Lancelier_Alpha",
   "timeout_s": 600,
   "max_turns": 60,

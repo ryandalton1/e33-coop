@@ -1,7 +1,7 @@
 {
   "name": "p3_freeaim_host",
   "description": "Phase 3 : visée libre. Verso (faux client) vise et tire 3 fois sur le Lancelier puis attaque ; l'hôte rejoue la visée avec ~1 s de décalage en imposant les points visés du propriétaire (D11). Produit l'enregistrement rejoué par p3_freeaim_client.",
-  "save": "e33coop-test/TEST_B",
+  "save": "e33lanes-test/TEST_B",
   "encounter": "SM_Lancelier_Alpha",
   "party": ["Verso", "Lune"],
   "timeout_s": 600,

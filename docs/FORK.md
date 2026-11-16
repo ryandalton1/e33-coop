@@ -32,11 +32,13 @@ Keep this list current: it is the checklist for every rebase.
 | Release assets | `e33coop-player.zip`, `Installer E33 Coop.exe` | `e33lanes-player.zip`, `Installer E33 Lanes.exe` | `release.hpp`, workflows, packaging |
 | Display name | E33 Coop | E33 Lanes | UI, installer |
 
-Done as one rename of `E33Coop`/`e33coop`/`E33 Coop` across `native/` (except `third_party/`), `tools/`, `.github/`, `lua/`. Internal macros (`E33COOP_VERSION`, `E33COOP_API`) are unchanged. Launch options (`-e33run`, `-e33lang`…) are unchanged: both mods ship their own UE4SS, so they are never loaded together.
+Done as one rename of `E33Coop`/`e33coop`/`E33 Coop` across `native/` (except `third_party/`), `tools/`, `.github/`, `lua/`, and `tests/scenarios` (test saves now live in `SaveGames/e33lanes-test`; recordings had no references). Internal macros (`E33COOP_VERSION`, `E33COOP_API`) are unchanged. Launch options (`-e33run`, `-e33lang`…) are unchanged: both mods ship their own UE4SS, so they are never loaded together.
 
 ### Added
 
 - `lua/LaneProbe`: the one-PC viability probe (see `SPIKES.md`, S0). Dev tool only, not packaged.
+- `native/sync/spike_s7.{hpp,cpp}` and `tests/scenarios/s7_*.json`: spike S7 (hold before the next actor), off unless `-e33s7=<mode>`. `coop::add_counter` lets modules outside coop report counters to the test runner.
+- Protocol v7 lane messages (`LaneResult`, `EnemyStateSync`, `HeroStatus`, `BattleStart.lanes/hp_mult`).
 - `docs/FORK.md`, `docs/DECISIONS-FORK.md`, `docs/SPIKES.md` (English).
 
 ## CI secrets

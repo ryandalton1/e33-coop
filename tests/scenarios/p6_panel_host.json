@@ -1,7 +1,7 @@
 {
   "name": "p6_panel_host",
   "description": "Panneau Coop du menu pause au clavier (F9 : ligne, Maj+F9 : changer), par le même code que les touches. Save TEST_B, équipe Maelle, Verso, Monoco. Menu pause ouvert, ligne 3 (Monoco) choisie puis donnée au faux client (même chemin que F6 : Owners diffusé), puis une ligne d'option choisie (surlignée, sans changement). Captures toutes les 2 s : vérifier à l'œil la ligne surlignée dans shots/*.png.",
-  "save": "e33coop-test/TEST_B",
+  "save": "e33lanes-test/TEST_B",
   "timeout_s": 600,
   "shots_every_s": 2,
   "actions": [{ "type": "attack" }],

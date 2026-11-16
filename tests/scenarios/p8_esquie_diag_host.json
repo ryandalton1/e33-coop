@@ -1,7 +1,7 @@
 {
   "name": "p8_esquie_diag_host",
   "description": "Diagnostic d'Esquie (carte du monde, D19) : vrai jeu hôte face au faux client. Save de fin de partie TEST_LATE (tour de Cléa), passage sur la carte du monde, puis diagnostic : classe et acteur d'Esquie, fonctions et propriétés liées à la monture, trace des appels, essai de montée par interaction (aucune touche simulée).",
-  "save": "e33coop-test/TEST_LATE",
+  "save": "e33lanes-test/TEST_LATE",
   "timeout_s": 600,
   "shots_every_s": 4,
   "actions": [{ "type": "flee" }],

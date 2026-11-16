@@ -1,7 +1,7 @@
 {
   "name": "p6_panelnav_input_host",
   "description": "INJECTE DE VRAIES ENTRÉES (clavier et souris dans la fenêtre du jeu) : à ne lancer qu'avec l'accord de Killian, PC libre (comme p7_menumirror_*). Panneau Coop au clavier et à la souris comme le menu du jeu : Droite depuis « Reprendre » entre dans le panneau, Bas / Haut parcourent les lignes, Entrée change la ligne, Gauche / Droite changent une valeur, Échap rend le focus au menu (menu toujours ouvert), survol puis clic sur la première ligne. Save TEST_B, équipe Maelle, Verso, Monoco. Mise en place sans entrée : le menu ouvert par le code (OpenPauseMenu) n'a aucun bouton focalisé, le focus est donné à « Reprendre » par SetFocus (état d'un joueur qui ouvre le menu au clavier) ; puis la fenêtre du jeu doit être au premier plan, sinon échec sans rien envoyer. Manette : à vérifier à la main (croix, stick, A, B). Captures chaque seconde.",
-  "save": "e33coop-test/TEST_B",
+  "save": "e33lanes-test/TEST_B",
   "timeout_s": 600,
   "shots_every_s": 1,
   "actions": [{ "type": "attack" }],

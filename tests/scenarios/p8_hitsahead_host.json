@@ -1,7 +1,7 @@
 {
   "name": "p8_hitsahead_host",
   "description": "Coups absents chez le client (2026-10-25, tour 9 : attaque ennemie à 5 coups chez l'hôte, 3 chez le client déjà dans son menu du tour 10 -> deux gels de 3 s chez l'hôte). Faux client (Verso, Lune) qui ne répond qu'au 1er coup de chaque tour ennemi puis envoie un menu du tour suivant (--missing-hits 1), réseau simulé. L'hôte cesse d'attendre dès ce signe (why owner_ahead, coup esquivé) : aucune attente de défense jusqu'au délai de 3 s, aucune de plus de 300 ms, combat mené à son terme.",
-  "save": "e33coop-test/TEST_B",
+  "save": "e33lanes-test/TEST_B",
   "encounter": "SM_Lancelier_Alpha",
   "party": ["Verso", "Maelle", "Lune"],
   "timeout_s": 700,

@@ -1,7 +1,7 @@
 {
   "name": "p8_turnlag_before_host",
   "description": "AVANT le démarrage synchronisé des tours ennemis (D28), alignement coupé (-e33turnalign=0) : reproduit les mini-gels de l'essai à deux PC du 2026-10-24. Le faux client (Verso et Lune, réseau simulé) commence chaque tour ennemi 1 s après l'hôte (--turn-lag 1.0 : il rejoue avec retard les actions des héros de l'hôte, comme le vrai client) et ne résout un coup qu'au même moment de son propre tour. L'hôte frappe donc ses héros 1 s avant lui et fige son image ~1 s par coup (defense_wait_max_ms, defense_waits_long = coop_wait_long site defense). Vérifie que le problème est bien reproduit ; p8_turnlag_host est le même combat avec l'alignement (critère chiffré).",
-  "save": "e33coop-test/TEST_B",
+  "save": "e33lanes-test/TEST_B",
   "encounter": "SM_Lancelier_Alpha",
   "party": ["Verso", "Maelle", "Lune"],
   "timeout_s": 700,

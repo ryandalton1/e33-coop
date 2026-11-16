@@ -1,7 +1,7 @@
 {
   "name": "p8_readystall_host",
   "description": "Hôte jamais figé par un client qui ne suit plus : le faux client (Maelle) n'envoie jamais BattleReady (comme le client tenu par la barrière au duel du prologue, 2026-10-22) alors qu'il ne fait rien d'autre : le combat commence sans lui après 15 s d'inactivité (-e33readyidle=15 ; 60 s par défaut) au lieu de 10 min. À partir du tour 4 il ne répond plus du tout (ni tour, ni hash, ni défense) : l'hôte joue une attaque automatique pour Maelle après 10 s de jeu (-e33stuckturn=10 ; 60 s par défaut) et n'attend plus ses défenses (une seule attente de 3 s au plus).",
-  "save": "e33coop-test/TEST_B",
+  "save": "e33lanes-test/TEST_B",
   "encounter": "SM_Lancelier_Alpha",
   "party": ["Verso", "Maelle", "Lune"],
   "timeout_s": 900,

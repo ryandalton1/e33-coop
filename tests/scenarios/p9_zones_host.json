@@ -1,7 +1,7 @@
 {
   "name": "p9_zones_host",
   "description": "Changements de zone (2026-10-23) : vrai jeu hôte (pilote) face au faux client. Save de fin de partie TEST_LATE (tour de Cléa). Le pilote enchaîne 7 transitions : drapeau d'expédition -> carte du monde (OnTeleportToWorldMap du drapeau, comme son menu) ; carte du monde -> rez-de-chaussée de la tour (entrée de la carte du monde, ProcessChangeMap comme son interaction) ; puis de vrais passages du jeu (BP_jRPG_MapTeleportPoint : il marche dans la boîte) rez-de-chaussée -> tour -> rez-de-chaussée -> carte du monde ; camp (ChangeMap direct) et retour sur la carte du monde. Produit l'enregistrement rejoué par p9_zones_client.",
-  "save": "e33coop-test/TEST_LATE",
+  "save": "e33lanes-test/TEST_LATE",
   "timeout_s": 900,
   "shots_every_s": 5,
   "actions": [{ "type": "flee" }],

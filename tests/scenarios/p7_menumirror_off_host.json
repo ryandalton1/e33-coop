@@ -1,7 +1,7 @@
 {
   "name": "p7_menumirror_off_host",
   "description": "Témoin de p7_menumirror_host avec -e33menumirror=0 : même faux client (menus envoyés mais ignorés), l'hôte garde la ligne « FakeClient prépare … » et la roue reste sur la page des actions pendant les tours de Verso. Les touches et clics injectés pendant ces tours (spam_local_input) ne doivent rien faire (blocage des entrées seul, sans miroir).",
-  "save": "e33coop-test/TEST_B",
+  "save": "e33lanes-test/TEST_B",
   "encounter": "SM_Lancelier_Alpha",
   "party": ["Verso", "Lune"],
   "timeout_s": 900,

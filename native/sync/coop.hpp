@@ -57,6 +57,8 @@ void set_local_aim(const double* point);
 // Compteurs pour le test runner (desyncs, raw_hash_diffs, gameplay_draws, defense_timeouts…).
 const std::map<std::string, int>& counters();
 int counter(const std::string& name);
+// Fork E33Lanes : compteur ajouté par un module hors coop (spikes) ; n = 0 le déclare (visible à 0 dans le rapport).
+void add_counter(const std::string& name, int n);
 // Version du mod (Hello, test à distance).
 const char* mod_version();
 // Hôte Steam : id de son salon coop prêt (0 sinon) ; ce SteamID en est-il membre ? (test à distance : salon proposé

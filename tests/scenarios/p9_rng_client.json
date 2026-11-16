@@ -1,7 +1,7 @@
 {
   "name": "p9_rng_client",
   "description": "D30 (après) : vrai jeu client face au faux hôte qui rejoue p9_rng_host (Lune + Monoco, héros de l'hôte). Le client tire la mise en place du combat avec la graine reçue dans le BattleStart : même position de départ de la roue de Monoco que l'hôte, mêmes tirages au tour 0 (comparés à ceux publiés par l'hôte), aucun écart d'état avant correction sur tout le combat.",
-  "save": "e33coop-test/TEST_B",
+  "save": "e33lanes-test/TEST_B",
   "encounter": "SM_Lancelier_Alpha",
   "party": ["Lune", "Monoco"],
   "timeout_s": 600,

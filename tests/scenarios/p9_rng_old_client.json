@@ -1,7 +1,7 @@
 {
   "name": "p9_rng_old_client",
   "description": "D30 (avant) : comme p9_rng_client avec -e33setupdraws=0 (ancien comportement : tirages de la mise en place laissés au jeu). Montre l'écart : tirages de gameplay du tour 0 non synchronisés (setup_draws_natural), position de départ de la roue de Monoco tirée au hasard ici (start_mech_diffs, coop_start_mech), réparée au tour 1 (raw_hash_diffs).",
-  "save": "e33coop-test/TEST_B",
+  "save": "e33lanes-test/TEST_B",
   "encounter": "SM_Lancelier_Alpha",
   "party": ["Lune", "Monoco"],
   "timeout_s": 600,

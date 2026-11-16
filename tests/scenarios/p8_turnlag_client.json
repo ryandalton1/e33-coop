@@ -1,7 +1,7 @@
 {
   "name": "p8_turnlag_client",
   "description": "Démarrage synchronisé des tours ennemis, sens client (D28) : vrai jeu client (Maelle) face au faux hôte qui rejoue p3_party_host avec un hôte en retard (--turn-lag 5.5 : chaque tour ennemi qui suit l'action de Maelle commence chez l'hôte 5,5 s après elle, ~1 s après le client), réseau simulé. Le client retient le tour ennemi, jeu animé, jusqu'à l'état de l'hôte (coop_turn_dep how=reset, turn_deps_on_reset) au lieu de le jouer en avance : ses attentes des défenses des héros de l'hôte (Verso, Lune ; image figée) restent sous 300 ms. p8_turnlag_before_client est le même combat sans la retenue (-e33turnalign=0).",
-  "save": "e33coop-test/TEST_B",
+  "save": "e33lanes-test/TEST_B",
   "encounter": "SM_Lancelier_Alpha",
   "party": ["Verso", "Maelle", "Lune"],
   "setup": { "Maelle": { "dead": true }, "Verso": { "dead": true } },

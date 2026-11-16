@@ -1,7 +1,7 @@
 {
   "name": "p3_actions_host",
   "description": "Phase 3 : vrai jeu hôte face au faux client, équipe Verso (faux client) + Lune (hôte). Compétences avec QTE offensifs (parfait / réussi / raté) résolus chez le propriétaire, objets (énergie, soin), vraies cibles. Produit l'enregistrement rejoué par p3_actions_client.",
-  "save": "e33coop-test/TEST_B",
+  "save": "e33lanes-test/TEST_B",
   "encounter": "SM_Lancelier_Alpha",
   "party": ["Verso", "Lune"],
   "timeout_s": 600,

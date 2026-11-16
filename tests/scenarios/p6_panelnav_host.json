@@ -1,7 +1,7 @@
 {
   "name": "p6_panelnav_host",
   "description": "Panneau Coop navigable comme le menu du jeu, par les fonctions du jeu (aucune vraie touche) : lignes en boutons du jeu, focus (SetFocus), clic (HandleButtonClicked : souris / Entrée / A), gauche-droite (diffusion de la navigation contrainte du bouton), raccourci F9 (le focus suit), Retour (focus rendu au menu, menu toujours ouvert). Save TEST_B, équipe Maelle, Verso, Monoco ; Monoco donné au faux client par un clic puis rendu par « droite ». Captures toutes les 2 s : vérifier à l'œil le bouton qui a le focus dans shots/*.png.",
-  "save": "e33coop-test/TEST_B",
+  "save": "e33lanes-test/TEST_B",
   "timeout_s": 600,
   "shots_every_s": 2,
   "actions": [{ "type": "attack" }],

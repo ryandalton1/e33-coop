@@ -1,7 +1,7 @@
 {
   "name": "p8_esquie_fly_host",
   "description": "Diagnostic du vol d'Esquie (carte du monde, D19) : vrai jeu hôte face au faux client, save TEST_LATE. Monte sur Esquie par l'événement de la touche de monture (appelé par le code, aucune touche simulée), journalise les signatures des fonctions de mode de déplacement, puis essaie le décollage (événement de saut), le vol, la descente et l'atterrissage.",
-  "save": "e33coop-test/TEST_LATE",
+  "save": "e33lanes-test/TEST_LATE",
   "timeout_s": 600,
   "actions": [{ "type": "flee" }],
   "defense": ["fail"],

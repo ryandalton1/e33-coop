@@ -1,7 +1,7 @@
 {
   "name": "p5_economy_host",
   "description": "Phase 5 : ressources communes (D13, option 1). L'hôte dépense 50 d'or hors de tout événement (comme un achat) : la variation part au client. Le faux client dépense 100 d'or (accepté et appliqué par l'hôte), puis une somme impossible (refusée : le client devra se resynchroniser). Produit l'enregistrement rejoué par p5_economy_client.",
-  "save": "e33coop-test/TEST_B",
+  "save": "e33lanes-test/TEST_B",
   "timeout_s": 600,
   "explore": [
     { "do": "wait_join", "players": 1, "timeout": 300 },

@@ -1,0 +1,20 @@
+{
+  "name": "s7_observe",
+  "description": "S7 (fork E33Lanes) : journal seul des fonctions de fin et de début de tour (ordre, image, temps). Aucune pause.",
+  "save": "e33lanes-test/TEST_A",
+  "encounter": "L_LumiereCitizenFleuret_Male*1",
+  "timeout_s": 600,
+  "action_delay_s": 1.5,
+  "combo_auto_success": 10,
+  "max_turns": 12,
+  "launch_args": ["-e33s7=observe", "-e33s7hold=5"],
+  "actions": [
+    { "type": "attack", "target": 0 }
+  ],
+  "defense": ["parry", "fail"],
+  "expect": {
+    "battle_end": "any",
+    "min_player_turns": 3,
+    "s7_holds": "0"
+  }
+}

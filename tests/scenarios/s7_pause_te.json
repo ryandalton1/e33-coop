@@ -1,0 +1,24 @@
+{
+  "name": "s7_pause_te",
+  "description": "S7 (fork E33Lanes) : pause du jeu (pause_te) entre l'action d'un héros et le choix du combattant suivant, 5 s, 3 fois. Verdict : s7_turns_during_hold = 0 (le tour suivant a attendu la fin de la pause) et s7_turns_after_release >= 1.",
+  "save": "e33lanes-test/TEST_A",
+  "encounter": "L_LumiereCitizenFleuret_Male*1",
+  "timeout_s": 600,
+  "action_delay_s": 1.5,
+  "combo_auto_success": 10,
+  "max_turns": 12,
+  "launch_args": ["-e33s7=pause_te", "-e33s7hold=5"],
+  "actions": [
+    { "type": "attack", "target": 0 }
+  ],
+  "defense": ["parry", "fail"],
+  "expect": {
+    "battle_end": "any",
+    "min_player_turns": 3,
+    "s7_holds": ">=1",
+    "s7_turns_after_release": ">=1",
+    "s7_holds_clean": "any",
+    "s7_turns_during_hold": "any",
+    "s7_frames_during_hold": "any"
+  }
+}
