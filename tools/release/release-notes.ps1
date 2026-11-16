@@ -32,6 +32,6 @@ $text
 Mises à jour : automatiques par défaut (installées à la fermeture du jeu). Options : **F9** en jeu.
 Hors ligne : poser ``e33lanes-player.zip`` et ``SHA256SUMS`` à côté de l'installateur.
 
-Empreintes : voir ``SHA256SUMS``. Historique complet : [CHANGELOG.md](https://github.com/ryguyqwerty/e33-coop/blob/fork/main/CHANGELOG.md).
+Empreintes : voir ``SHA256SUMS``. Historique complet : [CHANGELOG.md](https://github.com/ryandalton1/e33-coop/blob/fork/main/CHANGELOG.md).
 "@
 if ($Out) { [IO.File]::WriteAllText($Out, $notes + "`n", (New-Object Text.UTF8Encoding $false)) } else { $notes }

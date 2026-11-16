@@ -68,7 +68,7 @@ public:
         ModName = STR("E33Lanes");
         ModVersion = E33_STR(E33COOP_VERSION);
         ModDescription = STR("Coop en ligne pour Clair Obscur: Expedition 33");
-        ModAuthors = STR("kipavy, ryguyqwerty");
+        ModAuthors = STR("kipavy, ryandalton1");
     }
 
     ~E33LanesMod() override

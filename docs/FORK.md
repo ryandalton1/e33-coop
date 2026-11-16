@@ -2,7 +2,7 @@
 
 E33Lanes adds **lane combat** (3 players, each with a full party, against one shared enemy state) and later **free roam** to [kipavy/e33-coop](https://github.com/kipavy/e33-coop). The design brief is in `../e33-coop fork Lane Combat + Free Roam — Design Brief.md` (outside this repo); decisions specific to the fork are in `DECISIONS-FORK.md`; spike results are in `SPIKES.md`. Upstream docs (French) stay as they are.
 
-- **Repository:** github.com/ryguyqwerty/e33-coop, branch `fork/main`. Remote `upstream` = kipavy/e33-coop.
+- **Repository:** github.com/ryandalton1/e33-coop, branch `fork/main`. Remote `upstream` = kipavy/e33-coop.
 - **License:** GPL-3.0, same as upstream. Upstream copyright notices are kept; UE4SS is MIT.
 - **Game build:** Steam 23765773 (same as upstream at the pinned commit). Every offset and Blueprint signature in `GAME-INTERNALS.md` is tied to it.
 
@@ -28,7 +28,7 @@ Keep this list current: it is the checklist for every rebase.
 | Co-op save folder | `SaveGames/e33coop` | `SaveGames/e33lanes` | `sync/coopsave.cpp`, `explore_join.cpp`, `update.cpp`, `remote/*` |
 | Steam lobby tag | `e33coop` | `e33lanes` | `net/steam.cpp` |
 | Protocol magic | `0x43333345` "E33C" | `0x4C333345` "E33L" | `protocol/messages.hpp` |
-| Release repo (updater, installer) | `kipavy/e33-coop` | `ryguyqwerty/e33-coop` | `common/release.hpp` (`kRepo`), `common/https.hpp`, `ui/ui.cpp`, installer |
+| Release repo (updater, installer) | `kipavy/e33-coop` | `ryandalton1/e33-coop` | `common/release.hpp` (`kRepo`), `common/https.hpp`, `ui/ui.cpp`, installer |
 | Release assets | `e33coop-player.zip`, `Installer E33 Coop.exe` | `e33lanes-player.zip`, `Installer E33 Lanes.exe` | `release.hpp`, workflows, packaging |
 | Display name | E33 Coop | E33 Lanes | UI, installer |
 

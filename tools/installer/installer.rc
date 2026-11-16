@@ -19,7 +19,7 @@ BEGIN
     BEGIN
         BLOCK "040904b0"
         BEGIN
-            VALUE "CompanyName", "ryguyqwerty (github.com/ryguyqwerty/e33-coop, fork of kipavy/e33-coop)"
+            VALUE "CompanyName", "ryandalton1 (github.com/ryandalton1/e33-coop, fork of kipavy/e33-coop)"
             VALUE "FileDescription", "E33 Lanes - installateur du mod coop (Clair Obscur: Expedition 33)"
             VALUE "FileVersion", E33COOP_VERSION_STR
             VALUE "InternalName", "E33LanesInstaller"

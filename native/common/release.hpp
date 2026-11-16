@@ -13,7 +13,7 @@
 
 namespace e33::release {
 
-constexpr const char* kRepo = "ryguyqwerty/e33-coop";
+constexpr const char* kRepo = "ryandalton1/e33-coop";
 constexpr const char* kZipAsset = "e33lanes-player.zip";
 constexpr const char* kSumsAsset = "SHA256SUMS";
 constexpr uint32_t kAppId = 1903340;

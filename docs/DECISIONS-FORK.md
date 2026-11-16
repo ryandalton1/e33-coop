@@ -7,7 +7,7 @@ Same format as upstream's `DECISIONS.md`: finding, decision, revisit if. Numbere
 ## F1: Fork identity is E33Lanes (2026-11-16)
 
 **Finding:** two installs that share a mod folder, save folder, lobby tag or protocol magic can join, update or overwrite each other.
-**Decision:** the fork is E33Lanes everywhere (table in `FORK.md`). Releases come from `ryguyqwerty/e33-coop`.
+**Decision:** the fork is E33Lanes everywhere (table in `FORK.md`). Releases come from `ryandalton1/e33-coop`.
 **Revisit if:** free roam or lane combat lands upstream and the fork is retired.
 
 ## F2: Lane merges happen before the next actor is picked (2026-11-16)

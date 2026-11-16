@@ -3,7 +3,7 @@
 //  - --update : lancé par le mod (touche U) : attend la fermeture du jeu, met à jour, relance le jeu par Steam ;
 //  - --stage : lancé par le mod (option updates=auto), sans fenêtre : télécharge et vérifie la mise à jour, puis
 //    l'installe à la fermeture du jeu.
-// Paquet : dernière release GitHub de ryguyqwerty/e33-coop (e33lanes-player.zip), téléchargé en HTTPS depuis github.com
+// Paquet : dernière release GitHub de ryandalton1/e33-coop (e33lanes-player.zip), téléchargé en HTTPS depuis github.com
 // seulement, SHA-256 vérifié contre le SHA256SUMS de la même release ; ou un zip posé à côté de l'exe avec son
 // SHA256SUMS (hors ligne). Seul le dossier Sandfall\Binaries\Win64 du jeu est modifié (dwmapi.dll + ue4ss\), l'ancien
 // contenu est mis de côté dans Win64\e33lanes-backup-<date> et remis en place si l'installation échoue.
@@ -768,7 +768,7 @@ int mode_interactive(fs::path win64)
         c.pButtons = buttons.data();
         c.cButtons = static_cast<UINT>(buttons.size());
         c.dwCommonButtons = TDCBF_CLOSE_BUTTON;
-        c.pszFooter = T(L"Mod non officiel · github.com/ryguyqwerty/e33-coop", L"Unofficial mod · github.com/ryguyqwerty/e33-coop");
+        c.pszFooter = T(L"Mod non officiel · github.com/ryandalton1/e33-coop", L"Unofficial mod · github.com/ryandalton1/e33-coop");
         int b = 0;
         if (FAILED(TaskDialogIndirect(&c, &b, nullptr, nullptr))) return 1;
         if (b == 10) {

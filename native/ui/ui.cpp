@@ -144,8 +144,8 @@ constexpr Entry kTexts[] = {
     {"update_need_ours_host_auto", "{0} a une version plus récente du mod coop ({1}, vous {2}) : mise à jour installée à la fermeture du jeu",
                                    "{0} has a newer coop mod ({1}, you {2}): the update installs when you close the game"},
     {"update_need_other", "{0} doit mettre à jour le mod coop (sa version : {1}, la vôtre : {2})", "{0} must update the coop mod (their version: {1}, yours: {2})"},
-    {"update_no_installer", "Installateur absent : téléchargez « Installer E33 Lanes.exe » sur github.com/ryguyqwerty/e33-coop/releases",
-                            "Installer missing: download \"Installer E33 Lanes.exe\" from github.com/ryguyqwerty/e33-coop/releases"},
+    {"update_no_installer", "Installateur absent : téléchargez « Installer E33 Lanes.exe » sur github.com/ryandalton1/e33-coop/releases",
+                            "Installer missing: download \"Installer E33 Lanes.exe\" from github.com/ryandalton1/e33-coop/releases"},
     // Options (native/ui/options.cpp)
     {"options_card", "Options coop {0}/{1} · {2} : {3} — F9 suivant · Maj+F9 changer", "Coop options {0}/{1} · {2}: {3} — F9 next · Shift+F9 change"},
     {"coop_options", "Options", "Options"},
