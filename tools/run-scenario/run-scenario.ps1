@@ -16,6 +16,11 @@ $repo = (Resolve-Path "$PSScriptRoot\..\..").Path
 $scenario = Join-Path $repo "tests\scenarios\$Name.json"
 if (-not (Test-Path $scenario)) { throw "Scénario introuvable : $scenario" }
 $sc = Get-Content $scenario -Raw | ConvertFrom-Json
+# Test save present? (copied from .tools	estsaves by reset-env)
+if ($sc.save -and $sc.save -like "e33lanes-test/*") {
+    $saveFile = Join-Path $repo (".tools	estsaves\" + ($sc.save -replace "^e33lanes-test/", "") + ".sav")
+    if (-not (Test-Path $saveFile)) { throw "Test save missing: $saveFile (copy one of your EXPEDITION_*.sav there)" }
+}
 
 $stamp = Get-Date -Format "yyyyMMdd-HHmmss"
 $run = Join-Path $repo "runs\$stamp-$Name"

@@ -11,10 +11,18 @@ $repo = Resolve-Path "$PSScriptRoot\..\.."
 $win64 = Join-Path $GameDir "Sandfall\Binaries\Win64"
 if (-not (Test-Path (Join-Path $win64 "SandFall-Win64-Shipping.exe"))) { throw "Jeu introuvable : $win64" }
 
-Copy-Item (Join-Path $Ue4ssDir "dwmapi.dll") $win64 -Force
 $dst = Join-Path $win64 "ue4ss"
-New-Item -ItemType Directory -Force $dst | Out-Null
-Copy-Item (Join-Path $Ue4ssDir "ue4ss\*") $dst -Recurse -Force
+if (Test-Path (Join-Path $Ue4ssDir "dwmapi.dll")) {
+    Copy-Item (Join-Path $Ue4ssDir "dwmapi.dll") $win64 -Force
+    New-Item -ItemType Directory -Force $dst | Out-Null
+    Copy-Item (Join-Path $Ue4ssDir "ue4ss\*") $dst -Recurse -Force
+} elseif (Test-Path (Join-Path $dst "UE4SS-settings.ini")) {
+    # No pinned UE4SS download on this PC: keep the UE4SS already installed in the game (the CI package then
+    # replaces dwmapi.dll and UE4SS.dll with the build-matched ones).
+    Write-Output "UE4SS download not found ($Ue4ssDir): reusing the install already in the game"
+} else {
+    throw "UE4SS not found: neither $Ue4ssDir nor an existing install in $dst"
+}
 
 foreach ($m in $LuaMods) {
     $src = Join-Path $repo "lua\$m"
