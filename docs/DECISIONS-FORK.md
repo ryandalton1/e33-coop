@@ -38,3 +38,13 @@ Defaults, applied until Ryan answers:
 | Upstream | Ask Killian before Phase 5 |
 
 **Revisit if:** Ryan answers any of these.
+
+## F5: v1 uses a copy of the host's party; own parties are a committed Phase 4 feature (2026-11-16)
+
+**Finding:** a joining player loads the host's save (upstream D5/D12), so their heroes are the host's characters. Bringing your own heroes needs party profiles (spike S2) and build application.
+**Decision:** lane combat v1 gives every player a copy of the host's party, each playing their own copy. **Party profiles (each player brings their own heroes and builds) are required for Phase 4's exit**, not optional: Ryan confirmed it is a must-have feature.
+**Revisit if:** S2 shows `OverrideParty` plus build setters can't apply a foreign party; then find another path, don't drop the feature.
+
+## F6: Lane combat plan approved (2026-11-16)
+
+**Decision:** `PLAN-LANES.md` approved by Ryan as written. Work starts with spike S7 (a non-freezing hold before the next actor) and the lane protocol messages.
