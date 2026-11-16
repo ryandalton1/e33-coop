@@ -12,5 +12,5 @@
   "defense": ["parry"],
   "launch_args": ["-e33role=host", "-e33port=7777", "-e33lanes=1", "-e33lanehp=2", "-e33seed=16250036901998647475"],
   "fakepeer": { "start": "after_game", "args": ["client", "--connect", "127.0.0.1:7777", "--script", "{repo}/tests/scenarios/fakeclient_lanes_slow.json", "--record", "{run}/recording-fakeclient.jsonl", "--timeout", "900"] },
-  "expect": { "battle_end": "any", "min_player_turns": 3, "lane_turns": ">=4", "lane_result_timeouts": "0", "wait_max_ms": ">=2500" }
+  "expect": { "hashes_compared": "any", "lane_desyncs": "0", "battle_end": "any", "min_player_turns": 3, "lane_turns": ">=4", "lane_result_timeouts": "0", "wait_max_ms": ">=2500" }
 }
