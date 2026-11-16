@@ -69,6 +69,7 @@ void encode_payload(const Message& m, wire::Writer& w)
             w.u16(static_cast<uint16_t>(x.party.size()));
             for (auto& p : x.party) w.str(p);
             w.str(x.world_enemy); w.str(x.enemy_global_id); w.u8(x.engage); w.u16(x.turn_timer_s); w.u8(x.duo_parry);
+            w.u8(x.lanes); w.f64(x.hp_mult);   // v7 (E33Lanes)
         } else if constexpr (std::is_same_v<T, TurnStart>) {
             w.u32(x.battle_id); w.u32(x.turn); w.u8(static_cast<uint8_t>(x.kind)); w.u8(x.index); w.str(x.actor);
         } else if constexpr (std::is_same_v<T, ActionCommand>) {
@@ -214,6 +215,23 @@ void encode_payload(const Message& m, wire::Writer& w)
             w.u8(static_cast<uint8_t>(x.hover)); w.u8(x.action_type); w.str(x.secondary); w.boolean(x.targeting); w.u8(x.targeting_type);
             w.u16(static_cast<uint16_t>(x.targets.size()));
             for (auto& u : x.targets) w_unit(w, u);
+        } else if constexpr (std::is_same_v<T, LaneResult>) {
+            w.u32(x.battle_id); w.u32(x.turn); w.u8(x.player);
+            w.u16(static_cast<uint16_t>(x.enemies.size()));
+            for (auto& e : x.enemies) { w.u8(e.spot); w.f64(e.hp); w.i32(e.shield); w.u64(static_cast<uint64_t>(e.break_bar)); w.boolean(e.killed); }
+        } else if constexpr (std::is_same_v<T, EnemyStateSync>) {
+            w.u32(x.battle_id); w.u32(x.turn); w.u32(x.cycle);
+            w.u16(static_cast<uint16_t>(x.enemies.size()));
+            for (auto& e : x.enemies) {
+                w.u8(e.spot); w.str(e.cls); w.f64(e.hp); w.f64(e.max_hp); w.i32(e.shield); w.u64(static_cast<uint64_t>(e.break_bar)); w.boolean(e.dead);
+                w.u16(static_cast<uint16_t>(e.buffs.size()));
+                for (auto& b : e.buffs) { w.str(b.cls); w.i32(b.stacks); w.i32(b.turns); w.boolean(b.permanent); }
+            }
+            w_unit(w, x.next); w.u8(x.target_slot); w.u64(x.hash);
+        } else if constexpr (std::is_same_v<T, HeroStatus>) {
+            w.u32(x.battle_id); w.u32(x.turn); w.u8(x.player);
+            w.u16(static_cast<uint16_t>(x.heroes.size()));
+            for (auto& h : x.heroes) { w.u8(h.spot); w.str(h.cls); w.f64(h.hp); w.f64(h.max_hp); w.f64(h.ap); w.boolean(h.alive); }
         } else {
             static_assert(always_false<T>, "message non géré");
         }
@@ -255,6 +273,10 @@ std::optional<Message> decode_payload(MsgType t, wire::Reader& r, std::string& e
         if (r.ok() && !r.at_end()) { x.world_enemy = r.str(256); x.enemy_global_id = r.str(256); x.engage = r.u8(); }   // v5
         if (r.ok() && !r.at_end()) x.turn_timer_s = r.u16();   // v6
         if (r.ok() && !r.at_end()) x.duo_parry = r.u8();       // parade en duo (facultatif)
+        if (r.ok() && !r.at_end()) {                           // v7 (E33Lanes) : combat en couloirs
+            x.lanes = r.u8(); x.hp_mult = r.f64();
+            if (x.lanes > 1 || !std::isfinite(x.hp_mult) || x.hp_mult < 1.0 || x.hp_mult > 8.0) r.fail();
+        }
         return finish(x);
     }
     case MsgType::TurnStart: {
@@ -491,6 +513,43 @@ std::optional<Message> decode_payload(MsgType t, wire::Reader& r, std::string& e
         for (uint16_t i = 0; i < n && r.ok(); ++i) x.targets.push_back(r_unit(r));
         return finish(x);
     }
+    case MsgType::LaneResult: {
+        LaneResult x; x.battle_id = r.u32(); x.turn = r.u32(); x.player = r.u8();
+        if (x.player > kMaxLanePlayers) r.fail();
+        const uint16_t n = r.count(kMaxUnits);
+        for (uint16_t i = 0; i < n && r.ok(); ++i) {
+            EnemyDelta e; e.spot = r.u8(); e.hp = r.f64(); e.shield = r.i32(); e.break_bar = static_cast<int64_t>(r.u64()); e.killed = r.boolean();
+            if (!std::isfinite(e.hp)) r.fail();
+            x.enemies.push_back(e);
+        }
+        return finish(x);
+    }
+    case MsgType::EnemyStateSync: {
+        EnemyStateSync x; x.battle_id = r.u32(); x.turn = r.u32(); x.cycle = r.u32();
+        const uint16_t n = r.count(kMaxUnits);
+        for (uint16_t i = 0; i < n && r.ok(); ++i) {
+            EnemyState e; e.spot = r.u8(); e.cls = r.str(128); e.hp = r.f64(); e.max_hp = r.f64(); e.shield = r.i32();
+            e.break_bar = static_cast<int64_t>(r.u64()); e.dead = r.boolean();
+            if (!std::isfinite(e.hp) || !std::isfinite(e.max_hp) || e.max_hp < 0) r.fail();
+            const uint16_t nb = r.count(kMaxBuffs);
+            for (uint16_t j = 0; j < nb && r.ok(); ++j) { BuffState b; b.cls = r.str(128); b.stacks = r.i32(); b.turns = r.i32(); b.permanent = r.boolean(); e.buffs.push_back(b); }
+            x.enemies.push_back(std::move(e));
+        }
+        x.next = r_unit(r); x.target_slot = r.u8(); x.hash = r.u64();
+        if (x.target_slot > 2 && x.target_slot != kNoSlot) r.fail();
+        return finish(x);
+    }
+    case MsgType::HeroStatus: {
+        HeroStatus x; x.battle_id = r.u32(); x.turn = r.u32(); x.player = r.u8();
+        if (x.player > kMaxLanePlayers) r.fail();
+        const uint16_t n = r.count(kMaxUnits);
+        for (uint16_t i = 0; i < n && r.ok(); ++i) {
+            HeroBrief h; h.spot = r.u8(); h.cls = r.str(128); h.hp = r.f64(); h.max_hp = r.f64(); h.ap = r.f64(); h.alive = r.boolean();
+            if (!std::isfinite(h.hp) || !std::isfinite(h.max_hp) || !std::isfinite(h.ap)) r.fail();
+            x.heroes.push_back(std::move(h));
+        }
+        return finish(x);
+    }
     }
     err = "unknown message type " + std::to_string(static_cast<unsigned>(t));
     return std::nullopt;
@@ -550,6 +609,9 @@ const char* type_name(MsgType t)
     case MsgType::IntentPreview: return "IntentPreview";
     case MsgType::AimView: return "AimView";
     case MsgType::MenuState: return "MenuState";
+    case MsgType::LaneResult: return "LaneResult";
+    case MsgType::EnemyStateSync: return "EnemyStateSync";
+    case MsgType::HeroStatus: return "HeroStatus";
     }
     return "?";
 }
@@ -566,7 +628,8 @@ MsgType type_of(const Message& m)
                                         MsgType::Owners, MsgType::BattleReady, MsgType::Roster, MsgType::WorldHash, MsgType::ResyncRequest,
                                         MsgType::BuildOffer, MsgType::BuildChunk, MsgType::EconomyDelta,
                                         MsgType::IntentPreview, MsgType::AimView, MsgType::MenuState, MsgType::SceneStart, MsgType::SceneSkip,
-                                        MsgType::DefeatChoice, MsgType::EnemyActionDone, MsgType::FlagSet, MsgType::WorldLeavesRequest, MsgType::WorldLeaves};
+                                        MsgType::DefeatChoice, MsgType::EnemyActionDone, MsgType::FlagSet, MsgType::WorldLeavesRequest, MsgType::WorldLeaves,
+                                        MsgType::LaneResult, MsgType::EnemyStateSync, MsgType::HeroStatus};
     static_assert(std::size(order) == std::variant_size_v<Message>);
     return order[m.index()];
 }
@@ -629,6 +692,7 @@ std::string to_json(const Message& m)
             o.add("battle", x.battle_id).add("encounter", x.encounter).raw("owners", ow + "]").add("seed", static_cast<int64_t>(x.rng_seed)).raw("party", party + "]")
                 .add("world_enemy", x.world_enemy).add("enemy_id", x.enemy_global_id).add("engage", static_cast<int>(x.engage)).add("turn_timer_s", static_cast<int>(x.turn_timer_s))
                 .add("duo_parry", static_cast<int>(x.duo_parry));
+            if (x.lanes) o.add("lanes", static_cast<int>(x.lanes)).add("hp_mult", x.hp_mult);
         } else if constexpr (std::is_same_v<T, TurnStart>) {
             o.add("battle", x.battle_id).add("turn", x.turn).add("kind", static_cast<int>(x.kind)).add("index", static_cast<int>(x.index)).add("actor", x.actor);
         } else if constexpr (std::is_same_v<T, ActionCommand>) {
@@ -762,6 +826,34 @@ std::string to_json(const Message& m)
                 .add("page", static_cast<int>(x.page)).add("column", static_cast<int>(x.column)).add("hover", static_cast<int>(x.hover))
                 .add("action", static_cast<int>(x.action_type)).add("secondary", x.secondary).add("targeting", x.targeting)
                 .add("targeting_type", static_cast<int>(x.targeting_type)).raw("targets", ts + "]");
+        } else if constexpr (std::is_same_v<T, LaneResult>) {
+            std::string es = "[";
+            for (size_t i = 0; i < x.enemies.size(); ++i) {
+                const auto& e = x.enemies[i];
+                if (i) es += ",";
+                es += JsonObj().add("s", static_cast<int>(e.spot)).add("hp", e.hp).add("shield", e.shield).add("break", e.break_bar).add("killed", e.killed).str();
+            }
+            o.add("battle", x.battle_id).add("turn", x.turn).add("player", static_cast<int>(x.player)).raw("enemies", es + "]");
+        } else if constexpr (std::is_same_v<T, EnemyStateSync>) {
+            std::string es = "[";
+            for (size_t i = 0; i < x.enemies.size(); ++i) {
+                const auto& e = x.enemies[i];
+                if (i) es += ",";
+                std::string bs = "[";
+                for (size_t j = 0; j < e.buffs.size(); ++j) { if (j) bs += ","; bs += JsonObj().add("c", e.buffs[j].cls).add("n", e.buffs[j].stacks).add("t", e.buffs[j].turns).add("p", e.buffs[j].permanent).str(); }
+                es += JsonObj().add("s", static_cast<int>(e.spot)).add("c", e.cls).add("hp", e.hp).add("max", e.max_hp).add("shield", e.shield)
+                          .add("break", e.break_bar).add("dead", e.dead).raw("buffs", bs + "]").str();
+            }
+            o.add("battle", x.battle_id).add("turn", x.turn).add("cycle", x.cycle).raw("enemies", es + "]").raw("next", unit_json(x.next))
+                .add("target_slot", static_cast<int>(x.target_slot)).add("hash", static_cast<int64_t>(x.hash));
+        } else if constexpr (std::is_same_v<T, HeroStatus>) {
+            std::string hs = "[";
+            for (size_t i = 0; i < x.heroes.size(); ++i) {
+                const auto& h = x.heroes[i];
+                if (i) hs += ",";
+                hs += JsonObj().add("s", static_cast<int>(h.spot)).add("c", h.cls).add("hp", h.hp).add("max", h.max_hp).add("ap", h.ap).add("alive", h.alive).str();
+            }
+            o.add("battle", x.battle_id).add("turn", x.turn).add("player", static_cast<int>(x.player)).raw("heroes", hs + "]");
         }
     }, m);
     return o.str();

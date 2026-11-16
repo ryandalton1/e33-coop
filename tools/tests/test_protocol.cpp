@@ -1,4 +1,5 @@
 // Tests unitaires du protocole et du lien fiable (sans le jeu). Exécutés en CI via ctest.
+#include <cmath>
 #include <cstdio>
 #include <cstdlib>
 #include <deque>
@@ -14,6 +15,36 @@ using namespace e33;
 
 static int g_fail = 0;
 #define CHECK(c) do { if (!(c)) { std::printf("FAIL %s:%d: %s\n", __FILE__, __LINE__, #c); ++g_fail; } } while (0)
+
+// --- Lane combat (E33Lanes, v7) ---
+static proto::BattleStart lane_start(proto::BattleStart bs) { bs.lanes = 1; bs.hp_mult = 3.0; bs.party.clear(); bs.owners.clear(); return bs; }
+static proto::LaneResult lane_result()
+{
+    proto::LaneResult x; x.battle_id = 7; x.turn = 5; x.player = 2;
+    x.enemies = {{0, -12092.5, -1, 350, true}, {2, 0, 0, 0, false}};
+    return x;
+}
+static proto::EnemyStateSync enemy_sync()
+{
+    proto::EnemyStateSync x; x.battle_id = 7; x.turn = 5; x.cycle = 2;
+    proto::EnemyState a; a.spot = 0; a.cls = "BP_EnemyBattle_Cruler_C"; a.hp = 25764; a.max_hp = 59679; a.shield = 2; a.break_bar = 1200; a.dead = false;
+    a.buffs = {{"BP_BattleBuff_Burn_C", 3, 2, false}};
+    proto::EnemyState b; b.spot = 1; b.cls = "BP_EnemyBattle_CultistFlying_C"; b.hp = 0; b.max_hp = 6963; b.dead = true;
+    x.enemies = {a, b};
+    x.next = {proto::ActorKind::Enemy, 0}; x.target_slot = 1; x.hash = 0x0123456789ABCDEFull;
+    return x;
+}
+static proto::EnemyStateSync enemy_sync_end()   // battle over: no next actor, no target
+{
+    proto::EnemyStateSync x = enemy_sync(); x.turn = 9; x.enemies.clear(); x.next = {proto::ActorKind::Hero, proto::kNoSlot}; x.target_slot = proto::kNoSlot;
+    return x;
+}
+static proto::HeroStatus hero_status()
+{
+    proto::HeroStatus x; x.battle_id = 7; x.turn = 5; x.player = 1;
+    x.heroes = {{0, "BP_Maelle_Battle_C", 812.5, 1450, 4, true}, {1, "BP_Lune_Battle_C", 0, 1210, 0, false}};
+    return x;
+}
 
 static std::vector<proto::Message> samples()
 {
@@ -73,7 +104,8 @@ static std::vector<proto::Message> samples()
             proto::FlagSet{9, "NID_CuratorTutorial", {0x12345678u, 0x9ABCDEF0u, 0u, 0xFFFFFFFFu}, true}, proto::FlagSet{10, "NID_X", {}, false},
             proto::WorldLeavesRequest{1, {"gold", "inventory2", "flags"}}, proto::WorldLeavesRequest{2, {}},
             proto::WorldLeaves{1, "inventory2", 0xFEDCBA9876543210ull, 0, 2, {{"item:CritChanceOnWeak", "1"}, {"level:Weapon_X", "4"}}},
-            proto::WorldLeaves{1, "flags", 7, 1, 2, {{"NID_CuratorTutorial", "1"}}}, proto::WorldLeaves{1, "gold", 0, 0, 1, {}}};
+            proto::WorldLeaves{1, "flags", 7, 1, 2, {{"NID_CuratorTutorial", "1"}}}, proto::WorldLeaves{1, "gold", 0, 0, 1, {}},
+            lane_start(bs), lane_result(), proto::LaneResult{7, 2, 0, {}}, enemy_sync(), enemy_sync_end(), hero_status()};
 }
 
 static void test_roundtrip()
@@ -89,6 +121,25 @@ static void test_roundtrip()
         CHECK(proto::to_json(*back) == proto::to_json(m));
         CHECK(r.at_end());
     }
+}
+
+static bool decodes(const proto::Message& m)
+{
+    wire::Writer w; proto::encode(m, w);
+    wire::Reader r(w.data().data(), w.size()); std::string err;
+    return proto::decode(r, err).has_value();
+}
+
+static void test_invalid_lanes()
+{
+    { auto x = enemy_sync(); x.target_slot = 5; CHECK(!decodes(x)); }                 // hero slot out of range
+    { auto x = enemy_sync(); x.enemies[0].max_hp = -1; CHECK(!decodes(x)); }          // negative max HP
+    { auto x = lane_result(); x.player = 9; CHECK(!decodes(x)); }                     // unknown player
+    { auto x = lane_result(); x.enemies[0].hp = std::nan(""); CHECK(!decodes(x)); }   // non-finite damage
+    { auto x = hero_status(); x.player = 4; CHECK(!decodes(x)); }
+    { proto::BattleStart bs; bs.lanes = 1; bs.hp_mult = 0.5; CHECK(!decodes(bs)); }   // multiplier below 1
+    { proto::BattleStart bs; bs.lanes = 2; bs.hp_mult = 3.0; CHECK(!decodes(bs)); }   // lanes is a flag
+    { proto::BattleStart bs; bs.lanes = 1; bs.hp_mult = 3.0; CHECK(decodes(bs)); }
 }
 
 static void test_invalid()
@@ -396,6 +447,7 @@ int main()
     test_steam();
     test_roundtrip();
     test_invalid();
+    test_invalid_lanes();
     test_link();
     test_link_fragments();
     test_compat();
