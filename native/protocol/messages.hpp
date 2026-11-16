@@ -415,7 +415,8 @@ struct EnemyStateSync {                   // host -> all: merged enemy state, an
     uint8_t target_slot = kNoSlot;        // next actor is an enemy: hero slot its attack targets on every machine
     uint64_t hash = 0;                    // hash of enemies (desync check after repair)
 };
-struct HeroBrief { uint8_t spot = 0; std::string cls; double hp = 0; double max_hp = 0; double ap = 0; bool alive = true; };
+// speed (v8): the hero's speed stat; clients copy the host's per slot so every machine computes the same turn order.
+struct HeroBrief { uint8_t spot = 0; std::string cls; double hp = 0; double max_hp = 0; double ap = 0; bool alive = true; double speed = 0; };
 struct HeroStatus {                       // player -> all (relayed by the host): own heroes, for the teammate strip and defeat
     uint32_t battle_id = 0;
     uint32_t turn = 0;

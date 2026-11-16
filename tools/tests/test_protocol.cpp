@@ -44,7 +44,7 @@ static proto::EnemyStateSync enemy_sync_end()   // battle over: no next actor, n
 static proto::HeroStatus hero_status()
 {
     proto::HeroStatus x; x.battle_id = 7; x.turn = 5; x.player = 1;
-    x.heroes = {{0, "BP_Maelle_Battle_C", 812.5, 1450, 4, true}, {1, "BP_Lune_Battle_C", 0, 1210, 0, false}};
+    x.heroes = {{0, "BP_Maelle_Battle_C", 812.5, 1450, 4, true, 312.5}, {1, "BP_Lune_Battle_C", 0, 1210, 0, false, 0}};
     return x;
 }
 

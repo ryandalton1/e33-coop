@@ -70,3 +70,13 @@ Defaults, applied until Ryan answers:
 
 **Not done:** a fake host that merges (client-side scenario needs a recording from a real lane run), per-enemy status ownership beyond the name filter, 3-player scenario (the runner starts one fake peer), extra-turn effects (counted only through actor mismatches).
 **Revisit if:** any check above fails in the scenarios or the first real session.
+
+## F8: The game never freezes; wiped teams stay and watch (2026-11-16)
+
+**Ryan:** "i don't want game to freeze ever. but i do want player's to wait for each others turns to finish" and "let teams that wipe stay in the fight watching it until either they win or all parties wipe".
+**Decision (replaces F7's hold, spectate and turn-order rows):**
+- **Wait without freezing:** no blocking wait anywhere in lane mode. At the end of a turn each machine reports; the next turn is held at its start with the game's own turn-start dependency (`BM.TurnStartNotifyDependencies`, upstream D28: the game keeps animating, a "Waiting for …" line shows who is slow). The host merges in the tick as soon as every live result is in (30 s: merged without the silent player), then everyone is released. If the merge killed the held enemy, its turn is ended (`End Character Turn`).
+- **Spectate:** `IsAFullTeamDead` is answered "no" while our heroes are all down, an enemy stands and another team still fights. The wiped team stays in the fight, held, its enemy bars following the merged state, until a victory (rewards for everyone) or until every team is down (the host lets the game see it: defeat, D33). Works for the host too: a wiped host keeps merging the clients' turns.
+- **Turn order:** clients copy the host's hero speeds slot by slot (`HeroStatus.speed`), so every machine's own initiative picks the same next actor without waiting; differences are counted (`lane_actor_mismatches`).
+**Checks:** `lane_holds_registered` vs `lane_holds_missed` (did the game hold?), `lane_wait_max_ms`, `lane_spectates` vs `lane_wipe_suppress_missed` and `lane_all_heroes_killed_seen` (did the "no" keep us in?), `lane_speeds_aligned`, `lane_actor_mismatches`, `lane_dead_actor_turns_ended`.
+**S7 is now only a diagnostic:** it measures where else the game could be held; not needed for the design above unless a check fails.

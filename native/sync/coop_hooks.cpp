@@ -834,6 +834,22 @@ void subscribe()
         finalize_battle("rewards");
     });
 
+    // Fork E33Lanes : retenue du tour suivant sans figer le jeu (dépendance de début de tour, voir coop_lanes.cpp).
+    bus.post(L"/Game/Gameplay/BP_DependencyRefCounter.BP_DependencyRefCounter_C:Reset", [](HookCtx& ctx, UFunction*) { lane_on_deps(ctx.Context, true); });
+    bus.pre(L"/Game/Gameplay/BP_DependencyRefCounter.BP_DependencyRefCounter_C:StartListenToDependencies", [](HookCtx& ctx, UFunction*) { lane_on_deps(ctx.Context, false); });
+    // Fork E33Lanes : équipe à terre mais une autre se bat encore -> « non », on reste dans le combat en spectateur.
+    bus.post(fn(game::path::BattleMgr, L"IsAFullTeamDead"), [](HookCtx& ctx, UFunction* f) {
+        if (!s.battle.lanes || !s.battle.active) return;
+        auto v = ue::read_out_bool(ctx, f, STR("ReturnValue"));
+        if (!v) return;
+        bool result = *v;
+        lane_full_team_dead(result);
+        if (result != *v && !ue::write_out_bool(ctx, f, STR("ReturnValue"), result)) bump("lane_full_team_write_failures");
+    });
+    bus.pre(fn(game::path::BattleMgr, L"OnAllHeroesKilled"), [](HookCtx&, UFunction*) {
+        if (s.battle.lanes && s.battle.lane_spectating) bump("lane_all_heroes_killed_seen");   // diagnostic : défaite déclenchée malgré le « non »
+    });
+
     bus.pre(fn(game::path::BattleMgr, L"StartBattleEndFlow"), [](HookCtx& ctx, UFunction* f) {
         if (!s.battle.active || s.battle.ending) return;
         const int result = static_cast<int>(ue::read_param_int(ctx, f, STR("BattleEndResult")).value_or(-1));

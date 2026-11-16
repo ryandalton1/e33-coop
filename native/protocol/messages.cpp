@@ -237,7 +237,7 @@ void encode_payload(const Message& m, wire::Writer& w)
         } else if constexpr (std::is_same_v<T, HeroStatus>) {
             w.u32(x.battle_id); w.u32(x.turn); w.u8(x.player);
             w.u16(static_cast<uint16_t>(x.heroes.size()));
-            for (auto& h : x.heroes) { w.u8(h.spot); w.str(h.cls); w.f64(h.hp); w.f64(h.max_hp); w.f64(h.ap); w.boolean(h.alive); }
+            for (auto& h : x.heroes) { w.u8(h.spot); w.str(h.cls); w.f64(h.hp); w.f64(h.max_hp); w.f64(h.ap); w.boolean(h.alive); w.f64(h.speed); }
         } else if constexpr (std::is_same_v<T, SessionMode>) {
             w.u8(x.lanes); w.u8(x.freeroam); w.f64(x.lane_hp);
         } else {
@@ -556,8 +556,8 @@ std::optional<Message> decode_payload(MsgType t, wire::Reader& r, std::string& e
         if (x.player > kMaxLanePlayers) r.fail();
         const uint16_t n = r.count(kMaxUnits);
         for (uint16_t i = 0; i < n && r.ok(); ++i) {
-            HeroBrief h; h.spot = r.u8(); h.cls = r.str(128); h.hp = r.f64(); h.max_hp = r.f64(); h.ap = r.f64(); h.alive = r.boolean();
-            if (!std::isfinite(h.hp) || !std::isfinite(h.max_hp) || !std::isfinite(h.ap)) r.fail();
+            HeroBrief h; h.spot = r.u8(); h.cls = r.str(128); h.hp = r.f64(); h.max_hp = r.f64(); h.ap = r.f64(); h.alive = r.boolean(); h.speed = r.f64();
+            if (!std::isfinite(h.hp) || !std::isfinite(h.max_hp) || !std::isfinite(h.ap) || !std::isfinite(h.speed)) r.fail();
             x.heroes.push_back(std::move(h));
         }
         return finish(x);
@@ -873,7 +873,7 @@ std::string to_json(const Message& m)
             for (size_t i = 0; i < x.heroes.size(); ++i) {
                 const auto& h = x.heroes[i];
                 if (i) hs += ",";
-                hs += JsonObj().add("s", static_cast<int>(h.spot)).add("c", h.cls).add("hp", h.hp).add("max", h.max_hp).add("ap", h.ap).add("alive", h.alive).str();
+                hs += JsonObj().add("s", static_cast<int>(h.spot)).add("c", h.cls).add("hp", h.hp).add("max", h.max_hp).add("ap", h.ap).add("alive", h.alive).add("speed", h.speed).str();
             }
             o.add("battle", x.battle_id).add("turn", x.turn).add("player", static_cast<int>(x.player)).raw("heroes", hs + "]");
         } else if constexpr (std::is_same_v<T, SessionMode>) {

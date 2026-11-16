@@ -391,6 +391,7 @@ void tick(double dt)
     if (s.battle.active && !s.input_enabled) enforce_input_block();
     if (s.role == Role::Client) start_pending_battle();
     { prof::Scope p("explore"); explore::tick(s.now); }
+    { prof::Scope p("lanes"); lane_tick(); }   // fork : fusion des couloirs, retenue du tour sans figer
     { prof::Scope p("profile"); profile::tick(s.now, s.role != Role::Solo, coopsave::is_coop_game()); }   // fork : avant builds (héros du monde rendus d'abord)
     { prof::Scope p("builds"); builds::tick(s.now); }
     run_remote_action();

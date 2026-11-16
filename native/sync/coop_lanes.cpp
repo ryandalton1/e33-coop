@@ -4,7 +4,10 @@
 //           merged EnemyStateSync, applies it, follows the host's next actor (its own hero in that slot);
 //   host:   waits for every live client's LaneResult, merges (proto::lane::merge, statuses and per-player marks
 //           included), applies, broadcasts EnemyStateSync.
-// The wait is the blocking wait_for for now (frozen frame); lane_hold() is the one place to swap in spike S7's winner.
+// The wait never freezes the game: the next turn is held at its start with the game's own turn-start dependency
+// (BM.TurnStartNotifyDependencies, upstream D28: the game keeps animating), and the merge runs in the tick.
+// Wiped teams stay in the fight as spectators (IsAFullTeamDead answered "no" while another team is standing); the fight
+// is lost only when every team is down. Turn order: clients copy the host's hero speeds per slot (same initiative).
 // Upstream's symmetric replay (actions, defenses, menus, StateHash/StateSync, draw checks) is off in lane mode.
 // Display: teammate strip (status line), teammates' damage feed (toast), teammates' intents (IntentPreview, the brief's
 // LaneIntent). Defeat: a wiped client spectates (its local fight ends, it chooses alone); the host stops waiting for it.
@@ -17,7 +20,8 @@
 namespace e33::coop::detail {
 namespace {
 
-constexpr double kLaneWaitS = 15.0;
+constexpr double kLaneWaitS = 30.0;          // a silent player is merged without after this (the others keep animating)
+constexpr double kBannerAfterS = 0.4;
 
 bool lane_live() { return s.role != Role::Solo && s.battle.active && s.battle.lanes && !s.battle.ending; }
 
@@ -71,6 +75,7 @@ std::vector<proto::HeroBrief> hero_briefs()
         x.max_hp = statmap::max_hp(st);
         x.ap = ue::get_double(st, STR("CurrentAP"));
         x.alive = !game::is_dead_fast(h);
+        x.speed = statmap::get(st, STR("CharacterCurrentStats"), statmap::kSpeed).value_or(0);
         out.push_back(std::move(x));
     }
     std::sort(out.begin(), out.end(), [](const proto::HeroBrief& a, const proto::HeroBrief& b) { return a.spot < b.spot; });
@@ -149,9 +154,6 @@ int apply_enemies(const std::vector<proto::EnemyState>& want)
     return failed;
 }
 
-// The hold before the next actor's turn. v1: blocking wait (frozen frame), as upstream's turn_actor wait.
-template <class Cond>
-bool lane_hold(const char* site, Cond cond) { return wait_for(site, cond, kLaneWaitS); }
 
 std::string units_json(const std::vector<proto::EnemyState>& v)
 {
@@ -269,6 +271,9 @@ void show_intent(uint8_t player, const proto::IntentPreview& ip)
 
 } // namespace
 
+void lane_host_heroes(const proto::HeroStatus& h);
+namespace { void lane_release(const char* why); }
+
 bool lanes_on() { return s.battle.lanes; }
 
 // Host, battle creation: lane settings for BattleStart. hp_mult: -e33lanehp, else one share per player (F4).
@@ -315,8 +320,9 @@ void lane_turn_begin()
         send_hero_status(0);
         strip_refresh();
     }
-    // Base of the turn: the state every machine agrees on (after the sync and the turn-start effects, counted once).
-    b.lane_base = enemy_snapshot();
+    // Base of the turn: the state every machine agrees on. Normally set when the merged state is applied (the turn starts
+    // held); here only when nothing is pending (turn 1, or a turn the game did not hold).
+    if (!b.lane_pending) b.lane_base = enemy_snapshot();
     for (auto it = b.lane_results.begin(); it != b.lane_results.end();) it = it->first + 4 < b.turn ? b.lane_results.erase(it) : std::next(it);
     for (auto it = b.lane_syncs.begin(); it != b.lane_syncs.end();) it = it->first + 4 < b.turn ? b.lane_syncs.erase(it) : std::next(it);
 }
@@ -353,6 +359,7 @@ bool lane_handle(Peer& p, proto::Message& m)
         if (s.role == Role::Host && h->player != p.player_id) return true;
         if (h->battle_id == b.id) {
             b.lane_heroes[h->player] = *h;
+            lane_host_heroes(*h);
             if (all_dead(h->heroes) && !b.lane_wiped.count(h->player)) {
                 b.lane_wiped.insert(h->player);
                 bump("lane_players_wiped");
@@ -392,89 +399,140 @@ bool lane_drop_tx(const proto::Message& m)
     return false;
 }
 
-// StartBattleEndFlow, lane mode. Client whose party is down while the host fights on: spectator. Its local fight ends
-// (the game's defeat screen); the choice there is its own (no host choice will come for it), and the host stops waiting.
+// StartBattleEndFlow, lane mode. Normally a wiped team stays in the fight (lane_full_team_dead). If the game ended our
+// fight in defeat anyway while the host fights on (the "no" did not reach it), fallback: we leave the fight, the choice on
+// the defeat screen is ours, and the host stops waiting for us.
 void lane_on_battle_end(int result)
 {
     auto& b = s.battle;
     if (!b.lanes) return;
+    if (b.lane_pending || b.lane_dep_active) lane_release("battle end");
     if (s.role == Role::Client && result == game::EndDefeat && b.host_end < 0) {
         b.lane_wiped.insert(s.my_player_id);
-        send_hero_status(b.turn);                       // all heroes down: the host drops us from the wait
+        send_hero_status(b.turn);
         s.defeat.local_allowed = true;
-        bump("lane_spectates");
+        bump("lane_wipe_suppress_missed");
         ui::toast("lane_you_wiped", {}, 8.0);
-        log().write("lane_spectate", JsonObj().add("battle", b.id), b.turn);
+        log().write("lane_left_fight", JsonObj().add("battle", b.id), b.turn);
     }
     if (s.role != Role::Solo) profile::on_battle_end(result);
 }
 
-// StartCharacterTurn pre, lane mode. `slot`: the Character param (the game's pick for the next turn).
-void lane_sync_point(UObject** slot)
+// --- Turn hold (never freezes) ---------------------------------------------------------------------------------------
+
+namespace {
+
+UObject* lane_deps() { return ue::get_object(game::battle_manager(), STR("TurnStartNotifyDependencies")); }
+
+bool local_wiped()
+{
+    bool any = false;
+    for (UObject* h : game::players()) { any = true; if (!game::is_dead_fast(h)) return false; }
+    return any;
+}
+
+bool any_enemy_alive()
+{
+    for (UObject* e : game::enemies()) if (!game::is_dead_fast(e)) return true;
+    return false;
+}
+
+// Host: every team down (ours and every client in the game)?
+bool everyone_wiped()
+{
+    if (!s.battle.lane_spectating && !local_wiped()) return false;
+    for (auto& p : s.peers) if (in_game(p) && !s.battle.lane_wiped.count(p.player_id)) return false;
+    return true;
+}
+
+// Registers our hold on the game's turn-start dependency counter (the game waits for it while animating).
+void lane_register(UObject* deps, const char* how)
 {
     auto& b = s.battle;
-    if (!lane_live() || b.turn == 0) return;
-    if (ue::get_bool(game::battle_manager(), STR("HasActiveCounterAttack"))) return;
-    const uint32_t turn = b.turn;                       // the turn that just ended
-    if (b.lane_synced_turn == turn) return;             // StartCharacterTurn seen twice for one turn
-    b.lane_synced_turn = turn;
-    const auto local_end = enemy_snapshot();
-    const proto::Unit picked = slot && *slot ? actor_unit(*slot) : proto::Unit{proto::ActorKind::Hero, proto::kNoSlot};
+    ue::Call reg(deps, STR("Register Dependency"));
+    if (!reg) { bump("lane_hold_register_failures"); return; }
+    reg.set_object(STR("Dependency"), game::save_manager()).invoke();
+    b.lane_dep_active = true;
+    b.lane_dep_since_reset = true;
+    bump("lane_holds_registered");
+    log().write("lane_hold", JsonObj().add("how", how).add("pending", b.lane_pending).add("spectating", b.lane_spectating), b.turn);
+}
 
-    if (s.role == Role::Client) {
-        proto::LaneResult r{b.id, turn, s.my_player_id, proto::lane::deltas(b.lane_base, local_end)};
-        for (auto& p : s.peers) send_to(p, r);
-        send_hero_status(turn);
-        if (!lane_hold("lane_sync", [&] { return b.lane_syncs.count(turn) > 0 || b.host_end >= 0 || !b.active; })) {
-            bump("lane_sync_timeouts");
-            log().write("lane_sync_timeout", JsonObj().add("battle", b.id), turn);
-            return;
-        }
-        auto it = b.lane_syncs.find(turn);
-        if (it == b.lane_syncs.end()) return;           // battle over on the host
-        const auto y = it->second;
-        apply_enemies(y.enemies);
-        const auto after = enemy_snapshot();
-        if (proto::lane::hash(after) != y.hash) {
-            bump("lane_desyncs");
-            log().write("lane_desync", JsonObj().raw("local", units_json(after)).raw("host", units_json(y.enemies)), turn);
-        }
-        damage_feed(b.lane_base, local_end, y.enemies);
-        if (every_enemy_dead(y.enemies)) { check_battle_end("merge"); return; }
-        // Next actor: the host's (lane k = our own hero in slot k; an enemy spot as is).
-        if (slot && y.next.spot != proto::kNoSlot && (picked.kind != y.next.kind || picked.spot != y.next.spot || (*slot && game::is_dead_fast(*slot)))) {
-            UObject* want = game::find_unit(y.next.kind == proto::ActorKind::Hero, y.next.spot);
-            if ((!want || game::is_dead_fast(want)) && y.next.kind == proto::ActorKind::Hero) { want = first_alive_hero(); bump("lane_slot_fallbacks"); }
-            if (want && !game::is_dead_fast(want)) { *slot = want; bump("lane_actors_forced"); }
-            else bump("lane_actor_force_failures");
-            log().write("lane_actor_forced", JsonObj().add("local_kind", static_cast<int>(picked.kind)).add("local_spot", static_cast<int>(picked.spot))
-                                                 .add("host_kind", static_cast<int>(y.next.kind)).add("host_spot", static_cast<int>(y.next.spot)), turn);
-        }
-        bump("lane_turns");
-        return;
+void lane_release(const char* why)
+{
+    auto& b = s.battle;
+    if (b.lane_dep_active) {
+        ue::Call solve(lane_deps(), STR("SolveDependency"));
+        if (solve) solve.set_object(STR("Dependency"), game::save_manager()).invoke();
+        b.lane_dep_active = false;
+    } else if (b.lane_pending) {
+        bump("lane_holds_missed");             // the game never listened: the turn went on; the state is applied late
     }
+    if (b.lane_pending) {
+        const int ms = static_cast<int>((s.now - b.lane_pending_since) * 1000.0);
+        bump_max("lane_wait_max_ms", ms);
+        log().write("lane_released", JsonObj().add("turn", b.lane_pending).add("why", why).add("waited_ms", ms), b.turn);
+    }
+    b.lane_pending = 0;
+    ui::clear_status("lane_wait");
+}
 
-    // Host: every live client in the game sends one result for this turn (wiped players spectate: not waited for).
-    std::set<uint8_t> expected;
-    for (auto& p : s.peers) if (in_game(p) && !b.lane_wiped.count(p.player_id)) expected.insert(p.player_id);
-    auto all_in = [&] {
-        auto it = b.lane_results.find(turn);
-        for (uint8_t id : expected) {
-            if (b.lane_wiped.count(id)) continue;
-            if (it == b.lane_results.end() || !it->second.count(id)) return false;
-        }
-        return true;
-    };
-    if (!lane_hold("lane_results", all_in)) {
+// After a merge applied here: the held actor may be an enemy the merge killed (it would act invisible, S0): end its turn.
+void end_turn_if_dead_actor()
+{
+    UObject* cur = game::current_character();
+    if (!cur || game::is_player(cur) || !game::is_dead_fast(cur)) return;
+    ue::Call c(game::battle_manager(), STR("End Character Turn"));
+    const bool ok = c && c.invoke();
+    bump(ok ? "lane_dead_actor_turns_ended" : "lane_dead_actor_end_failures");
+    log().write("lane_dead_actor", JsonObj().add("cls", game::char_class(cur)).add("ended", ok), s.battle.turn);
+}
+
+// Client: our heroes' speeds = the host's, slot by slot (same initiative everywhere, so the same next actor).
+void align_speeds(const proto::HeroStatus& host)
+{
+    int n = 0;
+    for (const auto& hb : host.heroes) {
+        if (hb.speed <= 0) continue;
+        UObject* h = game::find_unit(true, hb.spot);
+        UObject* st = game::stats(h);
+        if (!st) continue;
+        const auto mine = statmap::get(st, STR("CharacterCurrentStats"), statmap::kSpeed);
+        if (mine && std::llround(*mine) == std::llround(hb.speed)) continue;
+        if (statmap::set(st, STR("CharacterCurrentStats"), statmap::kSpeed, hb.speed)) ++n;
+        else bump("lane_speed_align_failures");
+    }
+    if (n) bump("lane_speeds_aligned", n);
+}
+
+std::string waiting_names()
+{
+    auto& b = s.battle;
+    if (s.role == Role::Client) return player_name(0);
+    std::string w;
+    const uint32_t turn = b.lane_pending ? b.lane_pending : b.lane_merged_turn + 1;
+    auto it = b.lane_results.find(turn);
+    for (auto& p : s.peers) {
+        if (!in_game(p) || b.lane_wiped.count(p.player_id)) continue;
+        if (it != b.lane_results.end() && it->second.count(p.player_id)) continue;
+        w += (w.empty() ? "" : ", ") + player_name(p.player_id);
+    }
+    return w;
+}
+
+// Host: merge turn `turn` (results in, or time out) against our current state, apply, broadcast, release our hold.
+void host_merge(uint32_t turn, bool timed_out)
+{
+    auto& b = s.battle;
+    if (timed_out) {
         bump("lane_result_timeouts");
-        std::string missing;
-        for (uint8_t id : expected) if (!b.lane_results[turn].count(id)) missing += (missing.empty() ? "" : ",") + std::to_string(id);
-        log().write("lane_result_timeout", JsonObj().add("missing", missing), turn);   // merged without them
+        log().write("lane_result_timeout", JsonObj().add("missing", waiting_names()), turn);
     }
     std::vector<proto::LaneResult> results;
     for (auto& [id, r] : b.lane_results[turn]) results.push_back(r);
     proto::lane::MergeStats ms;
-    const auto merged = proto::lane::merge(b.lane_base, local_end, results, ms, b.lane_statuses ? &b.lane_marks : nullptr);
+    const auto local_now = enemy_snapshot();
+    const auto merged = proto::lane::merge(b.lane_base, local_now, results, ms, b.lane_statuses ? &b.lane_marks : nullptr);
     apply_enemies(merged);
     proto::EnemyStateSync y;
     y.battle_id = b.id;
@@ -482,21 +540,12 @@ void lane_sync_point(UObject** slot)
     y.cycle = ++b.lane_cycle;
     y.enemies = merged;
     y.hash = proto::lane::hash(merged);
-    y.next = picked;
-    // F2: the game picked an enemy the merge just killed. It would act invisible (S0): a hero acts instead.
-    if (slot && *slot && !game::is_player(*slot) && game::is_dead_fast(*slot)) {
-        if (UObject* h = first_alive_hero()) {
-            *slot = h;
-            y.next = actor_unit(h);
-            bump("lane_dead_actor_replaced");
-        } else {
-            bump("lane_dead_actor_picked");
-        }
-        log().write("lane_dead_actor_picked", JsonObj().add("spot", static_cast<int>(picked.spot)).add("replaced", y.next.kind == proto::ActorKind::Hero), turn);
-    }
+    if (UObject* cur = game::current_character()) y.next = actor_unit(cur);
     broadcast(y);
-    send_hero_status(turn);
-    damage_feed(b.lane_base, local_end, merged);
+    if (!b.lane_spectating) send_hero_status(turn);
+    damage_feed(b.lane_base, b.lane_local_end, merged);
+    b.lane_base = enemy_snapshot();
+    b.lane_merged_turn = turn;
     bump("lane_turns");
     bump("lane_merged_results", ms.results);
     bump("lane_kills", ms.kills);
@@ -508,7 +557,143 @@ void lane_sync_point(UObject** slot)
     log().write("lane_merge", JsonObj().add("results", ms.results).add("kills", ms.kills).add("overkill", ms.overkill)
                                   .add("statuses_added", ms.statuses_added).add("statuses_spent", ms.statuses_spent)
                                   .raw("merged", units_json(merged)), turn);
-    if (every_enemy_dead(merged)) check_battle_end("merge");
+    if (every_enemy_dead(merged)) { lane_release("victory"); check_battle_end("merge"); return; }
+    if (!b.lane_spectating) { lane_release("merged"); end_turn_if_dead_actor(); }
+}
+
+} // namespace
+
+// StartCharacterTurn pre, lane mode: the turn that just ended is reported; the next turn will be held at its start
+// (dependency, game animating) until the merged state is here. No wait in this hook.
+void lane_sync_point(UObject** slot)
+{
+    (void)slot;
+    auto& b = s.battle;
+    if (!lane_live() || b.turn == 0 || b.lane_spectating) return;
+    if (ue::get_bool(game::battle_manager(), STR("HasActiveCounterAttack"))) return;
+    const uint32_t turn = b.turn;                       // the turn that just ended
+    if (b.lane_synced_turn == turn) return;             // StartCharacterTurn seen twice for one turn
+    b.lane_synced_turn = turn;
+    b.lane_local_end = enemy_snapshot();
+    if (s.role == Role::Client) {
+        proto::LaneResult r{b.id, turn, s.my_player_id, proto::lane::deltas(b.lane_base, b.lane_local_end)};
+        for (auto& p : s.peers) send_to(p, r);
+        send_hero_status(turn);
+    }
+    b.lane_pending = turn;
+    b.lane_pending_since = s.now;
+    b.lane_dep_since_reset = false;
+}
+
+// BP_DependencyRefCounter Reset (post) / StartListenToDependencies (pre) on the turn-start counter: hold while pending.
+// Reset clears registrations, so ours is redone after each one (upstream D28 notes).
+void lane_on_deps(UObject* counter, bool is_reset)
+{
+    auto& b = s.battle;
+    if (!b.lanes || !b.active || b.ending || counter != lane_deps()) return;
+    if (!b.lane_pending && !b.lane_spectating) return;
+    if (ue::get_bool(game::battle_manager(), STR("HasActiveCounterAttack"))) return;
+    if (is_reset) { lane_register(counter, "reset"); return; }
+    if (!b.lane_dep_since_reset) lane_register(counter, "listen");
+}
+
+// IsAFullTeamDead (post): our heroes are all down but an enemy stands and another team still fights -> "no": we stay in
+// the fight as a spectator. The last team down lets the game see it (defeat for everyone, host's D33 flow).
+void lane_full_team_dead(bool& result)
+{
+    auto& b = s.battle;
+    if (!b.lanes || !b.active || b.ending || !result) return;
+    if (!local_wiped() || !any_enemy_alive()) return;    // enemies all dead: victory, untouched
+    if (s.role == Role::Host) {
+        bool other_alive = false;
+        for (auto& p : s.peers) if (in_game(p) && !b.lane_wiped.count(p.player_id)) other_alive = true;
+        if (!other_alive) return;                        // we are the last team standing... and down: defeat
+    }
+    result = false;
+    if (!b.lane_spectating) {
+        b.lane_spectating = true;
+        b.lane_wiped.insert(s.my_player_id);
+        send_hero_status(b.turn);                        // the others see us down (and stop waiting for us)
+        bump("lane_spectates");
+        ui::toast("lane_you_wiped_watch", {}, 8.0);
+        log().write("lane_spectate", JsonObj().add("battle", b.id), b.turn);
+    }
+}
+
+// Every frame (game thread).
+void lane_tick()
+{
+    auto& b = s.battle;
+    if (!b.lanes || !b.active || b.ending) return;
+    // Waiting banner (the game animates meanwhile).
+    if (b.lane_pending && s.now - b.lane_pending_since > kBannerAfterS) {
+        const std::string w = waiting_names();
+        if (!w.empty()) ui::set_status("lane_wait", "lane_waiting", {w});
+    }
+    if (s.role == Role::Client) {
+        uint32_t newest = 0;
+        for (auto& [t, y] : b.lane_syncs) if (t > b.lane_applied_turn) newest = std::max(newest, t);
+        if (b.lane_spectating) {                         // spectator: follow the fight's enemy state, stay held
+            if (newest) { apply_enemies(b.lane_syncs[newest].enemies); b.lane_applied_turn = newest; }
+            return;
+        }
+        if (b.lane_pending && b.lane_syncs.count(b.lane_pending)) {
+            const auto y = b.lane_syncs[b.lane_pending];
+            apply_enemies(y.enemies);
+            b.lane_applied_turn = y.turn;
+            if (proto::lane::hash(enemy_snapshot()) != y.hash) {
+                bump("lane_desyncs");
+                log().write("lane_desync", JsonObj().raw("local", units_json(enemy_snapshot())).raw("host", units_json(y.enemies)), y.turn);
+            }
+            damage_feed(b.lane_base, b.lane_local_end, y.enemies);
+            b.lane_base = enemy_snapshot();
+            UObject* cur = game::current_character();
+            if (cur && y.next.spot != proto::kNoSlot) {
+                const proto::Unit mine = actor_unit(cur);
+                if (mine.kind != y.next.kind || mine.spot != y.next.spot) {
+                    bump("lane_actor_mismatches");
+                    log().write("lane_actor_mismatch", JsonObj().add("local_kind", static_cast<int>(mine.kind)).add("local_spot", static_cast<int>(mine.spot))
+                                                           .add("host_kind", static_cast<int>(y.next.kind)).add("host_spot", static_cast<int>(y.next.spot)), y.turn);
+                }
+            }
+            if (every_enemy_dead(y.enemies)) { lane_release("victory"); check_battle_end("merge"); return; }
+            lane_release("synced");
+            end_turn_if_dead_actor();
+            bump("lane_turns");
+        } else if (b.lane_pending && (s.now - b.lane_pending_since > kLaneWaitS || b.host_end >= 0)) {
+            bump("lane_sync_timeouts");
+            lane_release(b.host_end >= 0 ? "host ended" : "timeout");
+        }
+        return;
+    }
+    // Host. The turn to merge: ours (pending) or, while we spectate, the clients' next one.
+    const uint32_t turn = b.lane_pending ? b.lane_pending : b.lane_spectating ? b.lane_merged_turn + 1 : 0;
+    if (!turn) return;
+    auto it = b.lane_results.find(turn);
+    bool all = true;
+    const bool any = it != b.lane_results.end() && !it->second.empty();
+    for (auto& p : s.peers) {
+        if (!in_game(p) || b.lane_wiped.count(p.player_id)) continue;
+        if (it == b.lane_results.end() || !it->second.count(p.player_id)) all = false;
+    }
+    if (b.lane_spectating && !b.lane_pending) {
+        if (everyone_wiped()) {                         // every team down: let the game see our wipe (defeat, D33)
+            if (!b.lane_defeat_checked) { b.lane_defeat_checked = true; check_battle_end("all teams down"); }
+            return;
+        }
+        if (!any) return;                               // spectating: the clients' turn starts with their first result
+        if (b.lane_spectate_wait_turn != turn) { b.lane_spectate_wait_turn = turn; b.lane_spectate_since = s.now; }
+        if (all || s.now - b.lane_spectate_since > kLaneWaitS) host_merge(turn, !all);
+        return;
+    }
+    if (all) host_merge(turn, false);
+    else if (s.now - b.lane_pending_since > kLaneWaitS) host_merge(turn, true);
+}
+
+// Client: the host's HeroStatus carries its speeds (turn order).
+void lane_host_heroes(const proto::HeroStatus& h)
+{
+    if (s.role == Role::Client && h.player == 0 && s.battle.lanes && s.battle.active) align_speeds(h);
 }
 
 } // namespace e33::coop::detail

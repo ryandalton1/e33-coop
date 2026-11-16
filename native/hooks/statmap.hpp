@@ -9,7 +9,8 @@ namespace RC::Unreal { class UObject; }
 
 namespace e33::statmap {
 
-inline constexpr int kHP = 1;   // E_jRPG_StatType: 1 = HP, 2 = AP, 3 = attack, 8 = speed, 9 = crit (Versus)
+inline constexpr int kHP = 1;      // E_jRPG_StatType: 1 = HP, 2 = AP, 3 = attack, 8 = speed, 9 = crit (Versus)
+inline constexpr int kSpeed = 8;  // unverified on the game: lane turn order copies the host's per slot (lane_speeds_aligned)
 
 std::optional<double> get(RC::Unreal::UObject* stats, const wchar_t* map, int stat);
 bool set(RC::Unreal::UObject* stats, const wchar_t* map, int stat, double value);

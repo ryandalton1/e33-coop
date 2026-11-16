@@ -264,6 +264,18 @@ struct Battle {
     bool lane_statuses = true;                             // fusion des statuts (phase 4)
     proto::lane::MarkLedger lane_marks;                    // hôte : marques par joueur (Foretell…)
     std::set<uint8_t> lane_wiped;                          // joueurs dont l'équipe est à terre (spectateurs)
+    // Retenue du tour suivant sans figer le jeu (dépendance de début de tour), fusion dans le tick
+    uint32_t lane_pending = 0;                             // tour fini ici, état fusionné attendu (0 : rien)
+    double lane_pending_since = 0;
+    bool lane_dep_active = false;                          // notre dépendance est inscrite
+    bool lane_dep_since_reset = false;                     // inscrite depuis le dernier Reset du compteur
+    uint32_t lane_merged_turn = 0;                         // hôte : dernier tour fusionné
+    uint32_t lane_applied_turn = 0;                        // client : dernier état fusionné appliqué
+    std::vector<proto::EnemyState> lane_local_end;         // état ennemi d'ici à la fin du tour (fil des dégâts)
+    bool lane_spectating = false;                          // notre équipe est à terre, on regarde la suite
+    uint32_t lane_spectate_wait_turn = 0;                  // hôte spectateur : tour des clients attendu
+    double lane_spectate_since = 0;
+    bool lane_defeat_checked = false;
 };
 
 // Tirages de la mise en place d'un combat (D30) : avant le tour 1 (BeginPlay des héros, équipement, effets de début de
@@ -549,6 +561,10 @@ bool lane_drop_tx(const proto::Message& m);
 void lane_sync_point(UObject** slot);
 proto::SessionMode session_mode();
 void lane_on_battle_end(int result);
+void lane_on_deps(UObject* counter, bool is_reset);
+void lane_full_team_dead(bool& result);
+void lane_tick();
+void lane_host_heroes(const proto::HeroStatus& h);
 void apply_host_party(const proto::BattleStart& bs);
 UObject* timeline_hero(UObject* timeline);
 bool impose_defense(UObject* hero, proto::Defense d, bool jumpable);
