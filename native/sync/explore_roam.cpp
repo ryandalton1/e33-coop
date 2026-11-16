@@ -10,9 +10,12 @@
 //  - story cinematics gather the party (teleport to the player who triggered it; the narrative barrier then syncs it);
 //    dialogues stay local;
 //  - Ctrl+F6: travel to the next player (same level: teleport; other level: change map, then teleport).
-// Puppets are spike S5: the spawn and animation inputs are unverified on the game (counters say what worked).
+// Puppets are spike S5. v1 (glided, teleported each frame) showed a static Gustave sliding (Ryan, 2026-11-16). v2: AI
+// controller + movement input (the game's locomotion animates it) and the sender's character (LoadAndActivateCharacter).
 #include "explore_internal.hpp"
 
+#include <algorithm>
+#include <cmath>
 #include <deque>
 
 namespace e33::explore::detail {
@@ -35,9 +38,13 @@ struct Puppet {
     double spawn_retry_at = 0;
     bool hidden = false;
     int spawn_failures = 0;
+    bool walks = false;                    // driven like a character (AI controller, walking, animated); else glided
+    std::string chr;                       // character shown (LoadAndActivateCharacter), empty = class default
+    double next_chr_try = 0;
 };
 
 std::map<uint8_t, Puppet> g_puppets;
+const bool g_walk = cmdline::arg(L"e33roamwalk") != L"0";   // -e33roamwalk=0: glided puppets (no AI controller)
 std::string g_level;                       // local level seen last frame
 bool g_key_down = false;
 uint8_t g_travel_last = 0xFF;
@@ -63,7 +70,34 @@ Transform make_transform(const double pos[3], double yaw_deg)
     return x;
 }
 
-UObject* spawn_puppet(const proto::PilotState& p, std::string& err)
+// Walking puppet (animated): an AI controller so the movement component runs, walking mode, collision kept for the floor
+// but ignoring pawns and the camera, and no overlap events (it must never trigger a battle, a zone or a pickup).
+bool make_walker(UObject* actor)
+{
+    ue::Call ctrl(actor, STR("SpawnDefaultController"));
+    if (!ctrl || !ctrl.invoke()) return false;
+    if (!ue::get_object(actor, STR("Controller"))) return false;
+    if (UObject* cap = ue::get_object(actor, STR("CapsuleComponent"))) {
+        for (int ch : {2, 4}) {   // ECC_Pawn, ECC_Camera -> ECR_Ignore
+            ue::Call c(cap, STR("SetCollisionResponseToChannel"));
+            if (c) c.set_int(STR("Channel"), ch).set_int(STR("NewResponse"), 0).invoke();
+        }
+        ue::Call o(cap, STR("SetGenerateOverlapEvents"));
+        if (o) o.set_bool(STR("bInGenerateOverlapEvents"), false).invoke();
+    } else {
+        return false;
+    }
+    if (UObject* mesh = ue::get_object(actor, STR("Mesh"))) {
+        ue::Call c(mesh, STR("SetCollisionEnabled"));
+        if (c) c.set_int(STR("NewType"), 0).invoke();
+        ue::Call o(mesh, STR("SetGenerateOverlapEvents"));
+        if (o) o.set_bool(STR("bInGenerateOverlapEvents"), false).invoke();
+    }
+    game::set_movement_mode(actor, 1);   // walking
+    return true;
+}
+
+UObject* spawn_puppet(const proto::PilotState& p, std::string& err, bool& walks)
 {
     if (p.pawn.empty()) { err = "no pawn class"; return nullptr; }
     auto* cls = ue::find_class_by_short_name(p.pawn);
@@ -83,10 +117,28 @@ UObject* spawn_puppet(const proto::PilotState& p, std::string& err)
     if (!actor) { err = "spawn returned null"; return nullptr; }
     ue::Call finish(gs, STR("FinishSpawningActor"));
     if (finish) finish.set_object(STR("Actor"), actor).set_raw(STR("SpawnTransform"), &tr).invoke();
-    // A puppet: no collision, no gravity, never possessed.
-    { ue::Call c(actor, STR("SetActorEnableCollision")); if (c) c.set_bool(STR("bNewActorEnableCollision"), false).invoke(); }
-    game::set_movement_mode(actor, 5);                      // flying: no gravity, stays where it is put
+    walks = g_walk && make_walker(actor);
+    if (!walks) {
+        // Fallback (S5 v1): no collision, no gravity, glided (no walk animation).
+        { ue::Call c(actor, STR("SetActorEnableCollision")); if (c) c.set_bool(STR("bNewActorEnableCollision"), false).invoke(); }
+        game::set_movement_mode(actor, 5);
+    }
     return actor;
+}
+
+// Walking puppets move with movement input toward the interpolated pose (the game's locomotion animates them); far off,
+// another floor or a glided puppet: placed directly.
+void drive_puppet(Puppet& pp, const Sample& x)
+{
+    double cur[3];
+    if (!pp.walks || !game::location(pp.actor, cur)) { game::teleport_pawn(pp.actor, x.pos, x.yaw); return; }
+    const double dx = x.pos[0] - cur[0], dy = x.pos[1] - cur[1], dz = x.pos[2] - cur[2];
+    const double d = std::sqrt(dx * dx + dy * dy);
+    if (d > 400.0 || std::fabs(dz) > 250.0) { game::teleport_pawn(pp.actor, x.pos, x.yaw); bump("roam_puppet_snaps"); return; }
+    if (d < 20.0) return;                                        // there: idle animation
+    const double speed = std::sqrt(x.vel[0] * x.vel[0] + x.vel[1] * x.vel[1]);
+    const double scale = std::clamp(std::max(speed / 600.0, d / 150.0), 0.25, 1.0);
+    game::move_pawn(pp.actor, dx / d, dy / d, scale);
 }
 
 void destroy_puppet(Puppet& pp, const char* why)
@@ -184,7 +236,8 @@ void roam_tick()
             if (pp.actor) destroy_puppet(pp, "class changed");
             if (s.now < pp.spawn_retry_at) continue;
             std::string err;
-            pp.actor = spawn_puppet(pp.last, err);
+            pp.actor = spawn_puppet(pp.last, err, pp.walks);
+            pp.chr.clear();
             if (!pp.actor) {
                 pp.spawn_retry_at = s.now + kSpawnRetryS;
                 if (++pp.spawn_failures <= 5) log().write("roam_puppet_spawn_failed", JsonObj().add("player", static_cast<int>(id)).add("err", err));
@@ -195,15 +248,22 @@ void roam_tick()
             pp.cls = pp.last.pawn;
             pp.hidden = false;
             bump("roam_puppets_spawned");
-            log().write("roam_puppet_spawned", JsonObj().add("player", static_cast<int>(id)).add("cls", pp.cls).add("level", level));
+            bump(pp.walks ? "roam_puppets_walking" : "roam_puppets_gliding");
+            log().write("roam_puppet_spawned", JsonObj().add("player", static_cast<int>(id)).add("cls", pp.cls).add("level", level).add("walks", pp.walks));
         }
         set_hidden(pp, false);
         Sample x;
         if (!pose_at(pp, s.now, x)) continue;
-        game::teleport_pawn(pp.actor, x.pos, x.yaw);
-        // Animation: the anim graph reads the movement component's velocity (and the movement mode when known).
-        if (UObject* cm = ue::get_object(pp.actor, STR("CharacterMovement")))
-            if (auto* v = ue::value_ptr<double>(cm, STR("Velocity"))) { v[0] = x.vel[0]; v[1] = x.vel[1]; v[2] = x.vel[2]; }
+        // Shown character = the sender's (same call as upstream's follower, PilotState.chr), one try a second.
+        if (!pp.last.chr.empty() && pp.chr != pp.last.chr && s.now >= pp.next_chr_try) {
+            pp.next_chr_try = s.now + 1.0;
+            ue::Call c(pp.actor, STR("LoadAndActivateCharacter"));
+            const bool ok = c && c.set_fname(STR("CharacterName"), ue::from_utf8(pp.last.chr).c_str()).set_bool(STR("HasSwitchCharacter"), true).invoke();
+            bump(ok ? "roam_puppet_character_switches" : "roam_puppet_character_errors");
+            log().write("roam_puppet_character", JsonObj().add("player", static_cast<int>(id)).add("chr", pp.last.chr).add("ok", ok));
+            if (ok) pp.chr = pp.last.chr;
+        }
+        drive_puppet(pp, x);
     }
 
     // Pending travel to another level: once there, next to the player.

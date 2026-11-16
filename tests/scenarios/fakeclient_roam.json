@@ -3,6 +3,14 @@
   "game_build": 23765773,
   "mod_version": "current",
   "gameplay_mods": [],
-  "roam": { "orbit": 300, "period_s": 8 },
-  "expect": { "session_freeroam": ">=1", "roam_anchors": ">=1", "roam_states_sent": ">=200" }
+  "roam": {
+    "orbit": 300,
+    "period_s": 8,
+    "character": "Lune"
+  },
+  "expect": {
+    "session_freeroam": ">=1",
+    "roam_anchors": ">=1",
+    "roam_states_sent": ">=200"
+  }
 }

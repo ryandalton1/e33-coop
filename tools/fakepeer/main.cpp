@@ -832,6 +832,7 @@ int run_client(const Args& a, JsonLog& log, Recorder& rec)
             ps.vx = -speed * std::sin(a); ps.vy = speed * std::cos(a); ps.vz = 0;
             ps.yaw = a * 180.0 / 3.14159265358979323846 + 90.0;
             ps.t_ms = 1 + static_cast<uint32_t>(std::fmod(now_s() * 1000.0, 4.0e9));
+            if (roam_cfg["character"].is_string()) ps.chr = roam_cfg["character"].as_string("");   // shown character
             lp->send(ps, false);
             ++counts["roam_states_sent"];
         }
