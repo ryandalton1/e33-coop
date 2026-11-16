@@ -999,6 +999,7 @@ void read_settings()
     // Fork E33Lanes : combat en couloirs (hôte). Coupe l'alignement des tours ennemis et l'attente par dépendance (upstream).
     s.lanes = arg(L"e33lanes") == L"1";
     if (const std::wstring v = arg(L"e33lanehp"); !v.empty()) s.lane_hp = std::wcstod(v.c_str(), nullptr);
+    if (const std::wstring v = arg(L"e33lanewait"); !v.empty()) s.lane_wait_s = std::max(0.0, std::wcstod(v.c_str(), nullptr));
     if (s.lanes) { s.turn_align = false; s.turn_dep = false; s.enemy_done = false; }
     s.lane_statuses = arg(L"e33lanestatus") != L"0";
     if (const std::wstring v = arg(L"e33lanemarks"); !v.empty()) {

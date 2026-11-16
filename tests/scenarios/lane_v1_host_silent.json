@@ -1,6 +1,6 @@
 {
   "name": "lane_v1_host_silent",
-  "description": "Lanes v1: the fake client never sends results. The host waits once (30 s), marks it absent and stops waiting for it; the next turns run at full speed (one timeout only).",
+  "description": "Lanes: optional wait limit (-e33lanewait=30; default is no limit). The fake client never sends results: the host waits once (30 s), marks it absent and stops waiting for it.",
   "save": "e33lanes-test/TEST_B",
   "encounter": "SM_Lancelier_Alpha",
   "timeout_s": 600,
@@ -22,7 +22,8 @@
     "-e33port=7777",
     "-e33lanes=1",
     "-e33lanehp=2",
-    "-e33seed=16250036901998647475"
+    "-e33seed=16250036901998647475",
+    "-e33lanewait=30"
   ],
   "fakepeer": {
     "start": "after_game",

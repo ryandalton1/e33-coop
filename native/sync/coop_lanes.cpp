@@ -20,7 +20,9 @@
 namespace e33::coop::detail {
 namespace {
 
-constexpr double kLaneWaitS = 30.0;          // a silent player is merged without after this (the others keep animating)
+// Waiting for a player has no limit by default (friends on a call; Ryan 2026-11-16): -e33lanewait=S sets one. A player
+// whose connection drops leaves the game (in_game false) and is no longer waited for either way.
+bool wait_over(double since) { return s.lane_wait_s > 0 && s.now - since > s.lane_wait_s; }
 constexpr double kBannerAfterS = 0.4;
 
 bool lane_live() { return s.role != Role::Solo && s.battle.active && s.battle.lanes && !s.battle.ending; }
@@ -714,7 +716,7 @@ void lane_tick()
             lane_release("synced");
             end_turn_if_dead_actor();
             bump("lane_turns");
-        } else if (b.lane_pending && (s.now - b.lane_pending_since > kLaneWaitS || b.host_end >= 0)) {
+        } else if (b.lane_pending && (wait_over(b.lane_pending_since) || b.host_end >= 0 || s.peers.empty())) {
             bump("lane_sync_timeouts");
             lane_release(b.host_end >= 0 ? "host ended" : "timeout");
         }
@@ -737,11 +739,11 @@ void lane_tick()
         }
         if (!any) return;                               // spectating: the clients' turn starts with their first result
         if (b.lane_spectate_wait_turn != turn) { b.lane_spectate_wait_turn = turn; b.lane_spectate_since = s.now; }
-        if (all || s.now - b.lane_spectate_since > kLaneWaitS) host_merge(turn, !all);
+        if (all || wait_over(b.lane_spectate_since)) host_merge(turn, !all);
         return;
     }
     if (all) host_merge(turn, false);
-    else if (s.now - b.lane_pending_since > kLaneWaitS) host_merge(turn, true);
+    else if (wait_over(b.lane_pending_since)) host_merge(turn, true);
 }
 
 // Client: the host's HeroStatus carries its speeds (turn order).

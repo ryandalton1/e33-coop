@@ -347,6 +347,7 @@ struct State {
     bool enemy_done = true;                                // fin d'action ennemie publiée et utilisée (-e33enemydone=0 : coupé, D36)
     bool lanes = false;                                    // fork : -e33lanes=1, combat en couloirs (hôte ; client : BattleStart)
     double lane_hp = 0;                                    // fork : -e33lanehp=X, multiplicateur des PV (0 = nombre de joueurs)
+    double lane_wait_s = 0;                                // fork : -e33lanewait=S, attente max d'un joueur (0 = sans limite)
     bool lane_statuses = true;                             // fork : -e33lanestatus=0, statuts des ennemis non fusionnés
     std::vector<std::string> lane_marks = {"Foretell", "Mark"};   // fork : -e33lanemarks=a,b, statuts « à chacun les siens »
     bool freeroam = false;                                 // fork : -e33freeroam=1, exploration libre (hôte ; client : SessionMode)
