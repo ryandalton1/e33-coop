@@ -249,6 +249,16 @@ struct Battle {
     uint16_t turn_timer_s = 0;
     std::set<std::pair<uint32_t, int>> forced;             // actions imposées par l'hôte (minuteur écoulé)
     double timer_elapsed = 0;                              // temps de jeu du tour (hors pauses et attente des joueurs)
+    // Fork E33Lanes, lane combat (coop_lanes.cpp)
+    bool lanes = false;                                    // combat en mode couloirs (BattleStart.lanes)
+    double hp_mult = 1.0;                                  // multiplicateur des PV ennemis
+    bool lane_scaled = false;                              // PV multipliés (tour 1)
+    std::vector<proto::EnemyState> lane_base;              // état ennemi commun au début du tour (base des deltas)
+    std::map<uint32_t, std::map<uint8_t, proto::LaneResult>> lane_results;   // hôte : tour -> joueur -> résultat
+    std::map<uint32_t, proto::EnemyStateSync> lane_syncs;  // client : tour -> état fusionné de l'hôte
+    std::map<uint8_t, proto::HeroStatus> lane_heroes;      // équipe de chaque joueur (affichage)
+    uint32_t lane_synced_turn = 0;                         // dernier tour fusionné (point de synchro passé)
+    uint32_t lane_cycle = 0;
 };
 
 // Tirages de la mise en place d'un combat (D30) : avant le tour 1 (BeginPlay des héros, équipement, effets de début de
@@ -315,6 +325,8 @@ struct State {
     double stuck_turn_s = kStuckTurnTimeout;               // hôte : -e33stuckturn=N
     bool turn_align = true;                                // hôte : démarrage synchronisé des tours ennemis (-e33turnalign=0 : coupé, D28)
     bool enemy_done = true;                                // fin d'action ennemie publiée et utilisée (-e33enemydone=0 : coupé, D36)
+    bool lanes = false;                                    // fork : -e33lanes=1, combat en couloirs (hôte ; client : BattleStart)
+    double lane_hp = 0;                                    // fork : -e33lanehp=X, multiplicateur des PV (0 = nombre de joueurs)
     double barrier_battle_since = -1;                      // diagnostic : barrière tenue pendant un combat engagé (depuis)
     bool want_join = false;                                // client : -e33join=1 (rejoindre la partie de l'hôte, D12)
     // Défaite (D33) : seul l'hôte choisit sur l'écran de défaite (« Réessayer » / « Abandonner »), les clients suivent.
@@ -520,6 +532,13 @@ std::vector<uint8_t> align_missing(uint32_t turn);
 void align_tick();
 void duo_parry_check();
 void on_turn_start(UObject* actor);
+// Fork E33Lanes, lane combat (coop_lanes.cpp)
+bool lanes_on();
+void lane_battle_settings(proto::BattleStart& bs);
+void lane_turn_begin();
+bool lane_handle(Peer& p, proto::Message& m);
+bool lane_drop_tx(const proto::Message& m);
+void lane_sync_point(UObject** slot);
 void apply_host_party(const proto::BattleStart& bs);
 UObject* timeline_hero(UObject* timeline);
 bool impose_defense(UObject* hero, proto::Defense d, bool jumpable);

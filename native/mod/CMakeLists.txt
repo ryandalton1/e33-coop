@@ -34,8 +34,10 @@ add_library(${TARGET} SHARED
     ../sync/presence.cpp
     ../sync/update.cpp
     ../sync/spike_s7.cpp
+    ../sync/coop_lanes.cpp
     ../protocol/messages.cpp
     ../protocol/lane_merge.cpp
+    ../hooks/statmap.cpp
     ../net/link.cpp
     ../net/udp.cpp
     ../net/steam.cpp

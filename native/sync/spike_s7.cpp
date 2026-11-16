@@ -1,8 +1,6 @@
 // Spike S7: see spike_s7.hpp.
 #include "spike_s7.hpp"
 
-#include <Windows.h>
-
 #include <cstdint>
 #include <string>
 
@@ -13,6 +11,14 @@
 #include "../hooks/log.hpp"
 #include "../hooks/ue.hpp"
 #include "coop.hpp"
+
+#ifndef WIN32_LEAN_AND_MEAN
+#define WIN32_LEAN_AND_MEAN
+#endif
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
+#include <Windows.h>
 
 using namespace RC::Unreal;
 

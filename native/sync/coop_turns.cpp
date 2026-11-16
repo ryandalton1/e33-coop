@@ -100,6 +100,7 @@ void host_turn_start(UObject* actor)
         bs.turn_timer_s = s.turn_timer_s;
         b.duo_parry = s.duo_parry;
         bs.duo_parry = s.duo_parry ? 1 : 0;
+        lane_battle_settings(bs);   // fork : mode couloirs (-e33lanes=1)
         auto ps = game::players();
         std::sort(ps.begin(), ps.end(), [](UObject* x, UObject* y) { return game::spot(x) < game::spot(y); });
         for (size_t i = 0; i < ps.size(); ++i) {
@@ -141,6 +142,7 @@ void host_turn_start(UObject* actor)
     const proto::Unit au = actor_unit(actor);
     turn_indicator(au);
     broadcast(proto::TurnStart{b.id, b.turn, au.kind, au.spot, game::char_class(actor)});
+    if (b.lanes) { lane_turn_begin(); return; }   // fork : pas d'état complet ni de hash (chaque joueur a ses héros)
     const proto::StateSync st = sync::snapshot(b.id, b.turn);
     const uint64_t h = sync::hash(st, au);
     b.local_hash[b.turn] = h;
@@ -229,6 +231,7 @@ void client_turn_start(UObject* actor)
         log().write("coop_turn_after_host_end", JsonObj().add("battle", b.id).add("host_end", b.host_end).add("actor", game::char_class(actor)), b.turn);
         return;
     }
+    if (b.lanes) { lane_turn_begin(); return; }   // fork : état ennemi déjà appliqué au point de synchro (StartCharacterTurn)
     // État de l'hôte pas encore là : vérification différée (le tick l'appelle à l'arrivée), pendant que la dépendance
     // retient le tour. Si le jeu écoutait déjà sans nous pour ce tour, trop tard : attente bloquante comme avant.
     if (s.turn_dep && !b.strict && b.turn > 1 && !b.host_sync.count(b.turn) && b.host_end < 0) {

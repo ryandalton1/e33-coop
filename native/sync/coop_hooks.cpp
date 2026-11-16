@@ -86,6 +86,13 @@ void subscribe()
         // encore reçus après OnTurnEnded du boss, jamais après StartCharacterTurn). Publiée avant toute attente ici.
         if (s.role != Role::Solo && s.battle.active && !s.battle.ending && !ue::get_bool(game::battle_manager(), STR("HasActiveCounterAttack")))
             enemy_action_done("start_character_turn");
+        // Fork E33Lanes : point de synchro des couloirs (fusion des dégâts avant le tour suivant). Le premier tour d'un
+        // client garde l'alignement upstream sur le TurnStart de l'hôte.
+        if (s.battle.lanes && s.battle.active) {
+            if (s.role == Role::Host) ++s.battle.sct_seq;
+            lane_sync_point(static_cast<UObject**>(ue::param_address(ctx, f, STR("Character"))));
+            return;
+        }
         if (s.role == Role::Host && s.turn_align && !s.battle.ending) {   // D28 : qui joue le prochain tour
             ++s.battle.sct_seq;
             auto** slot = static_cast<UObject**>(ue::param_address(ctx, f, STR("Character")));

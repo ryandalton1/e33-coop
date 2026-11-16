@@ -116,7 +116,16 @@ jobs:
 
       - name: Build
         run: |
-          cmake --build $env:BUILD_DIR --target UE4SS proxy E33Lanes
+          # Fork: compiler errors re-emitted as annotations (readable without signing in to the job log).
+          cmake --build $env:BUILD_DIR --target UE4SS proxy E33Lanes 2>&1 | Tee-Object -FilePath build.log
+          $code = $LASTEXITCODE
+          if ($code -ne 0) {
+            Select-String -Path build.log -Pattern ': (fatal )?error |error LNK' | Select-Object -First 40 | ForEach-Object {
+              $m = $_.Line -replace '%','%25' -replace "`r",'' -replace "`n",' '
+              Write-Output "::error::$m"
+            }
+          }
+          exit $code
 
       - name: Stage
         run: |

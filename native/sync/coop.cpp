@@ -63,7 +63,7 @@ std::vector<std::string> read_gameplay_mods()
     return mods;
 }
 
-void send_to(Peer& p, const proto::Message& m, bool reliable) { if (p.link) p.link->send(m, reliable); }
+void send_to(Peer& p, const proto::Message& m, bool reliable) { if (p.link && !lane_drop_tx(m)) p.link->send(m, reliable); }
 // Pair qui participe à la partie : accepté, et entré (instantané chargé) s'il a demandé à rejoindre. Un joueur qui
 // charge encore l'instantané (ou attend la fin d'un combat pour entrer) ne reçoit pas les messages de jeu.
 bool in_game(const Peer& p) { return p.accepted && p.drop.empty() && (s.role == Role::Client || explore::peer_in_game(p.player_id)); }
@@ -190,7 +190,8 @@ uint8_t owner_of_spot(int spot)
     auto it = s.battle.owner_by_spot.find(spot);
     return it == s.battle.owner_by_spot.end() ? 0 : it->second;
 }
-bool controls(int spot) { return owner_of_spot(spot) == s.my_player_id; }
+// Lane mode (fork): every hero here is ours (each player plays a whole party locally).
+bool controls(int spot) { return lanes_on() || owner_of_spot(spot) == s.my_player_id; }
 
 proto::Unit actor_unit(UObject* actor) { return sync::unit_of(actor); }
 
@@ -418,6 +419,7 @@ bool parry_key_down()
 // Messages de jeu communs (hôte et client) : stockés pour les points de synchro ; l'hôte relaie aux autres.
 bool handle_battle_common(Peer& p, proto::Message& m)
 {
+    if (lane_handle(p, m)) return true;   // fork : messages des couloirs ; rediffusion upstream ignorée en mode couloirs
     auto& b = s.battle;
     // Hôte : preuve positive que ce joueur est dans ce tour chez lui (il agit, ouvre ses menus, vise, pare : en plus de
     // son StateHash du tour). Un joueur qui réfléchit, fouille ses menus ou lit une description n'est jamais « bloqué ».
@@ -700,6 +702,8 @@ void handle(Peer& p, proto::Message& m)
         }
         s.battle.turn_timer_s = bs->turn_timer_s;
         s.battle.duo_parry = bs->duo_parry != 0;   // réglage de l'hôte, jamais le nôtre : même calcul partout
+        s.battle.lanes = bs->lanes != 0;           // fork : mode couloirs, réglage de l'hôte
+        s.battle.hp_mult = bs->hp_mult;
         log().write("coop_battle_start_received", JsonObj().add("battle", bs->battle_id).add("encounter", bs->encounter));
         return;
     }
@@ -854,6 +858,7 @@ void apply_options()
     if (s.battle.active) return;
     s.turn_dep = arg(L"e33turndep") != L"0";
     s.turn_align = arg(L"e33turnalign") != L"0";
+    if (s.lanes) { s.turn_align = false; s.turn_dep = false; }   // fork : mode couloirs
     s.options_dirty = false;
     log().write("coop_options", JsonObj().add("duo_parry", s.duo_parry).add("turn_timer_s", static_cast<int>(s.turn_timer_s)).add("turndep", s.turn_dep)
                                    .add("turnalign", s.turn_align));
@@ -987,6 +992,10 @@ void read_settings()
     if (const std::wstring v = arg(L"e33stuckturn"); !v.empty()) s.stuck_turn_s = std::wcstod(v.c_str(), nullptr);
     s.turn_align = arg(L"e33turnalign") != L"0";   // démarrage synchronisé des tours ennemis, par défaut depuis le 2026-10-24 (D28)
     s.enemy_done = arg(L"e33enemydone") != L"0";   // fin d'action ennemie publiée et utilisée, par défaut depuis le 2026-10-25 (D36)
+    // Fork E33Lanes : combat en couloirs (hôte). Coupe l'alignement des tours ennemis et l'attente par dépendance (upstream).
+    s.lanes = arg(L"e33lanes") == L"1";
+    if (const std::wstring v = arg(L"e33lanehp"); !v.empty()) s.lane_hp = std::wcstod(v.c_str(), nullptr);
+    if (s.lanes) { s.turn_align = false; s.turn_dep = false; s.enemy_done = false; }
     s.my_name = ue::to_utf8(arg(L"e33name"));
     s.name_from_arg = !s.my_name.empty();
     ui::init();
