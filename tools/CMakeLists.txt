@@ -19,6 +19,7 @@ set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS ${CMAKE_CURRENT_S
 
 add_library(e33proto STATIC
     ${NATIVE}/protocol/messages.cpp
+    ${NATIVE}/protocol/lane_merge.cpp
     ${NATIVE}/net/link.cpp
     ${NATIVE}/net/udp.cpp
     ${NATIVE}/net/steam.cpp
@@ -60,3 +61,6 @@ add_test(NAME remote COMMAND test_remote)
 add_executable(test_release tests/test_release.cpp)
 target_include_directories(test_release PRIVATE ${NATIVE}/common)
 add_test(NAME release COMMAND test_release)
+add_executable(test_lane tests/test_lane.cpp)
+target_link_libraries(test_lane PRIVATE e33proto)
+add_test(NAME lane COMMAND test_lane)

@@ -35,6 +35,7 @@ add_library(${TARGET} SHARED
     ../sync/update.cpp
     ../sync/spike_s7.cpp
     ../protocol/messages.cpp
+    ../protocol/lane_merge.cpp
     ../net/link.cpp
     ../net/udp.cpp
     ../net/steam.cpp
