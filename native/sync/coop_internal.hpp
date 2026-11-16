@@ -277,6 +277,8 @@ struct Battle {
     uint32_t lane_spectate_wait_turn = 0;                  // hôte spectateur : tour des clients attendu
     double lane_spectate_since = 0;
     bool lane_defeat_checked = false;
+    bool lane_in_check = false;                            // dans CheckBattleEnd, équipe à terre à garder en spectatrice
+    std::set<uint8_t> lane_absent;                         // hôte : joueurs muets (attendus une fois), plus attendus
 };
 
 // Tirages de la mise en place d'un combat (D30) : avant le tour 1 (BeginPlay des héros, équipement, effets de début de
@@ -564,6 +566,8 @@ proto::SessionMode session_mode();
 void lane_on_battle_end(int result);
 void lane_on_deps(UObject* counter, bool is_reset);
 void lane_full_team_dead(bool& result);
+void lane_check_end(bool pre);
+void lane_is_battle_ending(bool& result);
 void lane_tick();
 void lane_host_heroes(const proto::HeroStatus& h);
 void apply_host_party(const proto::BattleStart& bs);

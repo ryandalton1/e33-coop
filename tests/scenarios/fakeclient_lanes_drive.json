@@ -1,0 +1,21 @@
+{
+  "player_name": "FakeLaneDrive",
+  "game_build": 23765773,
+  "mod_version": "current",
+  "gameplay_mods": [],
+  "action_type": 1,
+  "combo_hits": 0,
+  "defense": [
+    "fail"
+  ],
+  "lanes": {
+    "damage": 1000,
+    "delay_s": 0,
+    "drive_s": 3
+  },
+  "expect": {
+    "lane_battles": ">=1",
+    "session_lanes": ">=1",
+    "lane_driven_results": ">=1"
+  }
+}

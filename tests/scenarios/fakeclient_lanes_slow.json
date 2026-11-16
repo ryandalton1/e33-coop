@@ -10,7 +10,7 @@
   ],
   "lanes": {
     "damage": 400,
-    "delay_s": 3
+    "delay_s": 8
   },
   "expect": {
     "lane_battles": ">=1",

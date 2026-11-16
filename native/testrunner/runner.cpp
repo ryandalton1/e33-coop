@@ -84,6 +84,7 @@ struct Scenario {
     double action_delay_s = 1.5;
     int combo_auto_success = 10;
     int max_turns = 60;
+    bool max_turns_ok = false;           // fork : atteindre max_turns termine le test sur ses vérifications (pas un échec)
     int wait_players = 0;       // hôte : nombre de clients attendus avant de lancer le combat
     bool manual = false;        // "manual": true : le joueur choisit lui-même les actions de ses héros (validation en jeu)
     std::vector<Action> actions;
@@ -236,6 +237,7 @@ bool load_scenario(const std::wstring& path, std::string& err)
     s.action_delay_s = v["action_delay_s"].as_number(1.5);
     s.combo_auto_success = static_cast<int>(v["combo_auto_success"].as_int(10));
     s.max_turns = static_cast<int>(v["max_turns"].as_int(60));
+    s.max_turns_ok = v["max_turns_ok"].as_bool(false);
     s.wait_players = static_cast<int>(v["wait_players"].as_int(0));
     s.manual = v["manual"].as_bool(false);
     for (size_t i = 0; i < v["actions"].size(); ++i) s.actions.push_back(parse_action(v["actions"][i]));
@@ -817,7 +819,11 @@ void subscribe()
         ++g.turn;
         if (g.turn == 1) { log().write("tr_inventory", JsonObj().raw("inventory", game::battle_inventory_json())); apply_setup(); }
         log().write("tr_turn", JsonObj().add("actor", game::char_class(ch)).add("player", game::is_player(ch)).add("counter", counter).raw("state", state_json()), g.turn);
-        if (g.turn > g.sc.max_turns) { fail("max_turns exceeded"); return; }
+        if (g.turn > g.sc.max_turns) {
+            if (g.sc.max_turns_ok) finish(true, "max_turns reached");
+            else fail("max_turns exceeded");
+            return;
+        }
         if (g.sc.pause_at_turn > 0 && g.turn == g.sc.pause_at_turn && g.pause_until < 0) {
             ue::Call c(game::controller(), STR("OpenPauseMenu"));
             if (c) c.invoke();

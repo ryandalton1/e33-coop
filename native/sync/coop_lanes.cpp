@@ -344,6 +344,7 @@ bool lane_handle(Peer& p, proto::Message& m)
     if (auto* r = std::get_if<proto::LaneResult>(&m)) {
         if (s.role == Role::Host && r->battle_id == b.id && r->player == p.player_id) {
             b.lane_results[r->turn][r->player] = *r;
+            if (b.lane_absent.erase(r->player)) bump("lane_players_back");
             b.acks[r->turn].insert(p.player_id);       // proof the player is in this turn (no StateHash in lane mode)
             if (r->turn >= b.turn) b.unresponsive.erase(p.player_id);
         } else {
@@ -520,7 +521,7 @@ std::string waiting_names()
     const uint32_t turn = b.lane_pending ? b.lane_pending : b.lane_merged_turn + 1;
     auto it = b.lane_results.find(turn);
     for (auto& p : s.peers) {
-        if (!in_game(p) || b.lane_wiped.count(p.player_id)) continue;
+        if (!in_game(p) || b.lane_wiped.count(p.player_id) || b.lane_absent.count(p.player_id)) continue;
         if (it != b.lane_results.end() && it->second.count(p.player_id)) continue;
         w += (w.empty() ? "" : ", ") + player_name(p.player_id);
     }
@@ -534,6 +535,15 @@ void host_merge(uint32_t turn, bool timed_out)
     if (timed_out) {
         bump("lane_result_timeouts");
         log().write("lane_result_timeout", JsonObj().add("missing", waiting_names()), turn);
+        // A silent player is waited for once: absent (not waited for) until a result of theirs comes in again.
+        auto rit = b.lane_results.find(turn);
+        for (auto& p : s.peers) {
+            if (!in_game(p) || b.lane_wiped.count(p.player_id) || b.lane_absent.count(p.player_id)) continue;
+            if (rit != b.lane_results.end() && rit->second.count(p.player_id)) continue;
+            b.lane_absent.insert(p.player_id);
+            bump("lane_players_absent");
+            ui::toast("lane_player_absent", {player_name(p.player_id)}, 6.0);
+        }
     }
     std::vector<proto::LaneResult> results;
     for (auto& [id, r] : b.lane_results[turn]) results.push_back(r);
@@ -605,27 +615,63 @@ void lane_on_deps(UObject* counter, bool is_reset)
     if (!b.lane_dep_since_reset) lane_register(counter, "listen");
 }
 
-// IsAFullTeamDead (post): our heroes are all down but an enemy stands and another team still fights -> "no": we stay in
-// the fight as a spectator. The last team down lets the game see it (defeat for everyone, host's D33 flow).
-void lane_full_team_dead(bool& result)
+// Another team still fights? Host: a client in the game not wiped. Client: the host, or a teammate it heard of, not wiped.
+static bool other_team_alive()
 {
     auto& b = s.battle;
-    if (!b.lanes || !b.active || b.ending || !result) return;
-    if (!local_wiped() || !any_enemy_alive()) return;    // enemies all dead: victory, untouched
     if (s.role == Role::Host) {
-        bool other_alive = false;
-        for (auto& p : s.peers) if (in_game(p) && !b.lane_wiped.count(p.player_id)) other_alive = true;
-        if (!other_alive) return;                        // we are the last team standing... and down: defeat
+        for (auto& p : s.peers) if (in_game(p) && !b.lane_wiped.count(p.player_id)) return true;
+        return false;
     }
+    if (!b.lane_wiped.count(0)) return true;
+    for (auto& [id, h] : b.lane_heroes) if (id != s.my_player_id && !b.lane_wiped.count(id)) return true;
+    return false;
+}
+
+// Our heroes are all down, an enemy stands and another team still fights: we stay in the fight as a spectator.
+static bool should_spectate()
+{
+    auto& b = s.battle;
+    return b.lanes && b.active && !b.ending && local_wiped() && any_enemy_alive() && other_team_alive();
+}
+
+static void enter_spectate(const char* how)
+{
+    auto& b = s.battle;
+    if (b.lane_spectating) return;
+    b.lane_spectating = true;
+    b.lane_wiped.insert(s.my_player_id);
+    send_hero_status(b.turn);                            // the others see us down (and stop waiting for us)
+    bump("lane_spectates");
+    ui::toast("lane_you_wiped_watch", {}, 8.0);
+    log().write("lane_spectate", JsonObj().add("battle", b.id).add("how", how), b.turn);
+}
+
+// CheckBattleEnd pre/post. The game decides defeat there from its own lists (IsAFullTeamDead is not asked: seen in game
+// 2026-11-16). While a wiped team should spectate, IsBattleEnding is answered "yes" inside the check, so the check sees an
+// end already under way and starts none. Victory (no enemy left) and the last team down are left to the game.
+void lane_check_end(bool pre)
+{
+    auto& b = s.battle;
+    if (!pre) { b.lane_in_check = false; return; }
+    b.lane_in_check = should_spectate();
+    if (b.lane_in_check) enter_spectate("check_battle_end");
+}
+
+void lane_is_battle_ending(bool& result)
+{
+    auto& b = s.battle;
+    if (!b.lane_in_check || result) return;
+    result = true;
+    bump("lane_defeats_suppressed");
+}
+
+// IsAFullTeamDead (post), if the game ever asks it: same rule.
+void lane_full_team_dead(bool& result)
+{
+    if (!result || !should_spectate()) return;
     result = false;
-    if (!b.lane_spectating) {
-        b.lane_spectating = true;
-        b.lane_wiped.insert(s.my_player_id);
-        send_hero_status(b.turn);                        // the others see us down (and stop waiting for us)
-        bump("lane_spectates");
-        ui::toast("lane_you_wiped_watch", {}, 8.0);
-        log().write("lane_spectate", JsonObj().add("battle", b.id), b.turn);
-    }
+    enter_spectate("full_team_dead");
 }
 
 // Every frame (game thread).
@@ -681,7 +727,7 @@ void lane_tick()
     bool all = true;
     const bool any = it != b.lane_results.end() && !it->second.empty();
     for (auto& p : s.peers) {
-        if (!in_game(p) || b.lane_wiped.count(p.player_id)) continue;
+        if (!in_game(p) || b.lane_wiped.count(p.player_id) || b.lane_absent.count(p.player_id)) continue;
         if (it == b.lane_results.end() || !it->second.count(p.player_id)) all = false;
     }
     if (b.lane_spectating && !b.lane_pending) {

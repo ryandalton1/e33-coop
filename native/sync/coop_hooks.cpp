@@ -846,6 +846,18 @@ void subscribe()
         lane_full_team_dead(result);
         if (result != *v && !ue::write_out_bool(ctx, f, STR("ReturnValue"), result)) bump("lane_full_team_write_failures");
     });
+    // La défaite se décide dans CheckBattleEnd (listes du jeu) : pendant ce test, IsBattleEnding répond « oui » si
+    // l'équipe d'ici doit rester spectatrice (aucune fin démarrée). Voir lane_check_end.
+    bus.pre(fn(game::path::BattleMgr, L"CheckBattleEnd"), [](HookCtx&, UFunction*) { if (s.battle.lanes) lane_check_end(true); });
+    bus.post(fn(game::path::BattleMgr, L"CheckBattleEnd"), [](HookCtx&, UFunction*) { if (s.battle.lanes) lane_check_end(false); });
+    bus.post(fn(game::path::BattleMgr, L"IsBattleEnding"), [](HookCtx& ctx, UFunction* f) {
+        if (!s.battle.lanes || !s.battle.lane_in_check) return;
+        auto v = ue::read_out_bool(ctx, f, STR("ReturnValue"));
+        if (!v) { bump("lane_battle_ending_read_failures"); return; }
+        bool result = *v;
+        lane_is_battle_ending(result);
+        if (result != *v && !ue::write_out_bool(ctx, f, STR("ReturnValue"), result)) bump("lane_battle_ending_write_failures");
+    });
     bus.pre(fn(game::path::BattleMgr, L"OnAllHeroesKilled"), [](HookCtx&, UFunction*) {
         if (s.battle.lanes && s.battle.lane_spectating) bump("lane_all_heroes_killed_seen");   // diagnostic : défaite déclenchée malgré le « non »
     });

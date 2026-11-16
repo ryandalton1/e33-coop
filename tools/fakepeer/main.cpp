@@ -321,6 +321,11 @@ int run_client(const Args& a, JsonLog& log, Recorder& rec)
     const double lane_damage = lane_cfg["damage"].as_number(500);
     const double lane_delay_s = lane_cfg["delay_s"].as_number(0);
     const bool lane_silent = lane_cfg["silent"].as_bool(false);
+    // "drive_s": no TurnStart from the host for that long (its team is down, it spectates, held): keep playing our own
+    // turns, one result (with damage) every drive_s, so the fight can still be won (tests spectate-until-victory).
+    const double lane_drive_s = lane_cfg["drive_s"].as_number(0);
+    uint32_t lane_last_turn = 0;
+    double lane_last_ts_at = 0, lane_drive_next = 0;
     bool lane_battle = false;
     uint32_t lane_bid = 0;
     std::vector<proto::EnemyState> lane_enemies;
@@ -469,6 +474,7 @@ int run_client(const Args& a, JsonLog& log, Recorder& rec)
             } else if (auto* ts = std::get_if<proto::TurnStart>(&m)) {
                 enemy_turn[ts->turn] = ts->kind == proto::ActorKind::Enemy;
                 turn_actor[ts->turn] = {ts->kind, ts->index};
+                if (lane_battle && ts->battle_id == lane_bid) { lane_last_turn = std::max(lane_last_turn, ts->turn); lane_last_ts_at = now_s(); }
                 if (lane_battle && ts->battle_id == lane_bid && !lane_silent) {
                     proto::LaneResult r{lane_bid, ts->turn, my_id, {}};
                     if (ts->kind == proto::ActorKind::Hero && lane_damage > 0)
@@ -823,6 +829,16 @@ int run_client(const Args& a, JsonLog& log, Recorder& rec)
             ++counts["roam_states_sent"];
         }
         if (disconnected) continue;   // vient de se déconnecter : plus rien n'est envoyé
+        if (lane_battle && lane_drive_s > 0 && !lane_silent && !ended && lane_last_turn > 0 && now_s() - lane_last_ts_at > lane_drive_s &&
+            now_s() >= lane_drive_next) {
+            proto::LaneResult r{lane_bid, ++lane_last_turn, my_id, {}};
+            for (auto& e : lane_enemies) if (!e.dead) { r.enemies.push_back({e.spot, -lane_damage, 0, 0, lane_damage >= e.hp}); break; }
+            lp->send(r);
+            lp->send(proto::HeroStatus{lane_bid, lane_last_turn, my_id, {}});
+            lane_drive_next = now_s() + lane_drive_s;
+            ++counts["lane_driven_results"];
+            ++counts["lane_results_sent"];
+        }
         // Envois différés arrivés à échéance, dans l'ordre de programmation.
         for (size_t i = 0; i < later.size();) {
             if (now_s() >= later[i].first) { lp->send(later[i].second); later.erase(later.begin() + static_cast<std::ptrdiff_t>(i)); }

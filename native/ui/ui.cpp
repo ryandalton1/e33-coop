@@ -37,6 +37,7 @@ constexpr Entry kTexts[] = {
     {"lane_feed", "Vos coéquipiers : {0} dégâts", "Your teammates: {0} damage"},
     {"lane_feed_kill", "Vos coéquipiers : {0} dégâts, {1} ennemi(s) achevé(s)", "Your teammates: {0} damage, {1} enemy(ies) finished"},
     {"lane_player_wiped", "L'équipe de {0} est à terre", "{0}'s party is down"},
+    {"lane_player_absent", "{0} ne répond plus : le combat continue sans l'attendre", "{0} is not responding: the fight goes on without waiting"},
     {"lane_waiting", "En attente de {0}…", "Waiting for {0}…"},
     {"lane_you_wiped_watch", "Votre équipe est à terre : vous regardez la suite du combat", "Your party is down: you are watching the rest of the fight"},
     {"lane_you_wiped", "Votre équipe est à terre : les autres continuent le combat", "Your party is down: the others fight on"},

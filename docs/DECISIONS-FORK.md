@@ -80,3 +80,9 @@ Defaults, applied until Ryan answers:
 - **Turn order:** clients copy the host's hero speeds slot by slot (`HeroStatus.speed`), so every machine's own initiative picks the same next actor without waiting; differences are counted (`lane_actor_mismatches`).
 **Checks:** `lane_holds_registered` vs `lane_holds_missed` (did the game hold?), `lane_wait_max_ms`, `lane_spectates` vs `lane_wipe_suppress_missed` and `lane_all_heroes_killed_seen` (did the "no" keep us in?), `lane_speeds_aligned`, `lane_actor_mismatches`, `lane_dead_actor_turns_ended`.
 **S7 is now only a diagnostic:** it measures where else the game could be held; not needed for the design above unless a check fails.
+
+### F8 update: first in-game runs (2026-11-16)
+
+- **Hold works:** lane_v1_host passed its lane checks on Ryan's PC: 19 turns, 18 holds registered and released, longest hold 22 ms, victory. One bug found and fixed first: releasing the hold made the game Reset the counter re-entrantly and we registered a second hold nobody released (enemy turn stuck). State is now cleared before `SolveDependency`.
+- **Spectate lever changed:** the game never asks `IsAFullTeamDead`; defeat is decided inside `CheckBattleEnd` from its own lists. New lever: while a wiped team should spectate, `IsBattleEnding` is answered "yes" inside `CheckBattleEnd` (an end looks under way, none is started). Checked by `lane_spectate_host` (host wipes, fake client keeps playing with `drive_s`, expected victory).
+- **Silent player:** waited for once (30 s), then marked absent and not waited for until a result of theirs comes in again (`lane_players_absent`, `lane_players_back`).

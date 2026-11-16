@@ -1,0 +1,51 @@
+{
+  "name": "lane_spectate_host",
+  "description": "Lanes: the host's party wipes (no defense) while the fake client fights on. The host must stay in the fight as a spectator (no defeat), follow the merged enemy state, and win when the client's damage kills the enemy.",
+  "save": "e33lanes-test/TEST_B",
+  "encounter": "SM_Lancelier_Alpha",
+  "timeout_s": 900,
+  "wait_players": 1,
+  "max_turns": 60,
+  "action_delay_s": 1.0,
+  "combo_auto_success": 10,
+  "actions": [
+    {
+      "type": "attack",
+      "target": 0
+    }
+  ],
+  "defense": [
+    "fail"
+  ],
+  "launch_args": [
+    "-e33role=host",
+    "-e33port=7777",
+    "-e33lanes=1",
+    "-e33lanehp=2",
+    "-e33seed=16250036901998647475"
+  ],
+  "fakepeer": {
+    "start": "after_game",
+    "args": [
+      "client",
+      "--connect",
+      "127.0.0.1:7777",
+      "--script",
+      "{repo}/tests/scenarios/fakeclient_lanes_drive.json",
+      "--record",
+      "{run}/recording-fakeclient.jsonl",
+      "--timeout",
+      "900"
+    ]
+  },
+  "expect": {
+    "hashes_compared": "any",
+    "gameplay_draws": "any",
+    "min_player_turns": 1,
+    "lane_desyncs": "0",
+    "battle_end": "1",
+    "lane_spectates": ">=1",
+    "lane_defeats_suppressed": ">=1",
+    "lane_merged_results": ">=3"
+  }
+}
