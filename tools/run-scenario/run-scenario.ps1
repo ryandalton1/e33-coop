@@ -42,11 +42,48 @@ $peerSpecs = @()
 Get-Process "fakepeer" -ErrorAction SilentlyContinue | ForEach-Object { Log "faux pair orphelin arrêté (pid $($_.Id))"; Stop-Process -Id $_.Id -Force }
 if ($sc.fakepeers) { $peerSpecs = @($sc.fakepeers) } elseif ($sc.fakepeer) { $peerSpecs = @($sc.fakepeer) }
 $peers = @()
+# Same list as the mod (coop.cpp read_gameplay_mods): enabled non-builtin UE4SS mods, .pak files in ~mods and LogicMods.
+function Get-HostGameplayMods {
+    $builtin = @("CheatManagerEnablerMod", "ConsoleCommandsMod", "ConsoleEnablerMod", "SplitScreenMod", "LineTraceMod",
+                 "BPML_GenericFunctions", "BPModLoaderMod", "Keybinds", "E33Lanes", "E33Explore")
+    $mods = @()
+    $txt = Join-Path $GameDir "Sandfall\Binaries\Win64\ue4ss\Mods\mods.txt"
+    if (Test-Path $txt) {
+        foreach ($line in Get-Content $txt) {
+            $c = $line.IndexOf(":")
+            if ($c -lt 0 -or $line.StartsWith(";")) { continue }
+            $name = $line.Substring(0, $c).TrimEnd(" ", "`t")
+            if ($line.IndexOf("1", $c) -lt 0 -or $builtin -contains $name) { continue }
+            $mods += "ue4ss:$name"
+        }
+    }
+    foreach ($d in @("Sandfall\Content\Paks\~mods", "Sandfall\Content\Paks\LogicMods")) {
+        $dir = Join-Path $GameDir $d
+        if (Test-Path -LiteralPath $dir) { Get-ChildItem -LiteralPath $dir -File -Filter *.pak | ForEach-Object { $mods += "pak:$($_.Name)" } }
+    }
+    $arr = [string[]]@($mods)
+    [Array]::Sort($arr, [StringComparer]::Ordinal)   # byte order, as std::sort in the mod (the host compares in order)
+    return ,$arr
+}
 function Start-FakePeer($spec, [int]$index) {
     $fp = Join-Path $repo ".tools\bin\fakepeer.exe"
     if (-not (Test-Path $fp)) { throw "fakepeer.exe introuvable : $fp (artefact CI e33lanes-tools)" }
     $tag = if ($index -eq 0) { "fakepeer" } else { "fakepeer$($index + 1)" }
     $peerArgs = @($spec.args | ForEach-Object { $_.Replace("{repo}", $repo).Replace("{run}", $run) }) + @("--log", (Join-Path $run "$tag.jsonl"))
+    # The host rejects a peer whose gameplay mods differ: the fake peer reports this PC's list (script copy in the run).
+    $si = [Array]::IndexOf([string[]]$peerArgs, "--script")
+    if ($si -ge 0 -and $si + 1 -lt $peerArgs.Count) {
+        $text = Get-Content $peerArgs[$si + 1] -Raw
+        if ($text -notmatch '"gameplay_mods"') {
+            $mods = Get-HostGameplayMods
+            $list = ConvertTo-Json -InputObject @($mods) -Compress
+            $text = ([regex]'\{').Replace($text, "{ `"gameplay_mods`": $list,", 1)
+            $copy = Join-Path $run "$tag-script.json"
+            [IO.File]::WriteAllText($copy, $text)
+            $peerArgs[$si + 1] = $copy
+            Log "faux pair $($index + 1) : mods de gameplay de ce PC : $($mods -join ', ')"
+        }
+    }
     $quoted = $peerArgs | ForEach-Object { if ($_ -match '\s') { "`"$_`"" } else { $_ } }
     Log "démarrage du faux pair $($index + 1) : $fp $($quoted -join ' ')"
     $p = Start-Process $fp -ArgumentList $quoted -PassThru -WindowStyle Hidden -RedirectStandardOutput (Join-Path $run "$tag.out") -RedirectStandardError (Join-Path $run "$tag.err")
