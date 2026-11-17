@@ -8,7 +8,7 @@ $explore = Join-Path $repo "runs\explore"
 $snip = Join-Path $repo "lua\E33Explore\snippets"
 $remote = Join-Path $repo "tools\dev\remote.ps1"
 function Remote([string]$file, [int]$timeout = 30) { powershell -NoProfile -File $remote -File $file -TimeoutSec $timeout }
-function Code([string]$code, [int]$timeout = 30) { powershell -NoProfile -File $remote -Code $code -TimeoutSec $timeout }
+function Code([string]$code, [int]$timeout = 30) { $f = Join-Path $env:TEMP "e33-probe-cmd.lua"; [IO.File]::WriteAllText($f, $code); Remote $f $timeout }  # -Code loses its quotes
 if (Get-Process "SandFall-Win64-Shipping" -ErrorAction SilentlyContinue) { throw "Close the game first" }
 New-Item -ItemType Directory -Force $explore | Out-Null
 foreach ($f in "cmd.lua", "cmd.out", "cmd.tmp") { Remove-Item (Join-Path $explore $f) -ErrorAction SilentlyContinue }
