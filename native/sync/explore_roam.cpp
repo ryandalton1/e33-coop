@@ -3,12 +3,13 @@
 //  - every player publishes PilotState (position, level, movement mode, pawn class) at the pilot rate; the host relays;
 //  - other players are drawn as puppets: a non-colliding actor of the sender's pawn class, interpolated from a ~100 ms
 //    buffer (upstream D23's idea), hidden when the sender is in another level;
-//  - world state: persistent flags (FlagSet, upstream D38) from any player, applied everywhere; interactions, dialogue
-//    choices, map changes and scenes are no longer replayed (each player's own);
+//  - shared story, modelled on Online Expedition (docs/DECISIONS-FORK.md F9): the host's story is the party's. Flags
+//    from any player apply everywhere; the host's map changes take everyone along; cutscenes (and their skip) from any
+//    player play for everyone; interactions and dialogue choices are not replayed;
 //  - battles: any player's engagement asks the host (upstream D34 request, encounter name as fallback when the host is
 //    elsewhere); the host's BattleStart pulls everyone in (lane combat), each returns to their own position after;
-//  - story cinematics gather the party (teleport to the player who triggered it; the narrative barrier then syncs it);
-//    dialogues stay local;
+//  - a cinematic first gathers the party (teleport to the player who triggered it), then plays everywhere (upstream
+//    SceneStart replay; the narrative barrier syncs its end); dialogues stay local (lines for everyone: phase 2);
 //  - Ctrl+F6: travel to the next player (same level: teleport; other level: change map, then teleport).
 // Puppets are spike S5. v1 (glided, teleported each frame) showed a static Gustave sliding (Ryan, 2026-11-16). v2: AI
 // controller + movement input (the game's locomotion animates it) and the sender's character (LoadAndActivateCharacter).

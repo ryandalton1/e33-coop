@@ -328,13 +328,15 @@ bool handle(uint8_t from, const proto::Message& m)
     if (!s.host && !sharing() && (std::holds_alternative<proto::WorldInteract>(m) || std::holds_alternative<proto::DialogueChoice>(m) ||
                                   std::holds_alternative<proto::PilotState>(m) || std::holds_alternative<proto::FlagSet>(m)))
         return true;
-    // Fork, exploration libre : l'état du monde vient de tous (drapeaux) ; interactions, choix, changements de niveau et
-    // scènes ne sont plus rejoués (chacun les siens).
-    if (s.roam && (std::holds_alternative<proto::WorldInteract>(m) || std::holds_alternative<proto::DialogueChoice>(m) ||
-                   std::holds_alternative<proto::MapChange>(m) || std::holds_alternative<proto::SceneStart>(m) || std::holds_alternative<proto::SceneSkip>(m))) {
+    // Fork, exploration libre, histoire partagée façon Online Expedition (décision F9) : l'histoire est celle de l'hôte.
+    //  - changements de niveau : ceux de l'hôte seulement (seul l'hôte les publie) ; les suiveurs voyagent avec lui ;
+    //  - cinématiques (SceneStart) et passages (SceneSkip) : de n'importe qui, rejoués chez tous (rassemblement d'abord) ;
+    //  - interactions et choix de dialogue : pas rejoués (chacun les siens ; état repris de l'hôte, phase 2).
+    if (s.roam && (std::holds_alternative<proto::WorldInteract>(m) || std::holds_alternative<proto::DialogueChoice>(m))) {
         bump("roam_replays_ignored");
         return true;
     }
+    if (s.roam && s.host && std::holds_alternative<proto::MapChange>(m)) { bump("roam_client_map_changes_ignored"); return true; }
     // Drapeau persistant du pilote (D38) : relayé par l'hôte depuis le pilote seulement, comme WorldInteract.
     if (auto* fl = std::get_if<proto::FlagSet>(&m)) {
         if (s.host) { if (from != s.pilot && !s.roam) return true; s.net.relay(m, from, true); }
@@ -380,17 +382,17 @@ bool handle(uint8_t from, const proto::Message& m)
     }
     if (std::get_if<proto::BarrierRelease>(&m)) return true;
     if (auto* ss = std::get_if<proto::SceneStart>(&m)) {
-        if (s.host) { if (ss->player != from || from != s.pilot) return true; s.net.relay(m, from, true); }
+        if (s.host) { if (ss->player != from || (from != s.pilot && !s.roam)) return true; s.net.relay(m, from, true); }
         log().write("coop_scene_remote", JsonObj().add("player", static_cast<int>(ss->player)).add("scene", ss->scene).add("sequence", ss->sequence)
                                              .add("cause", static_cast<int>(ss->cause)).add("cause_path", ss->cause_path).add("action", ss->action));
-        if (ss->player == s.pilot && ss->player != s.me && sharing()) { sc.pending = *ss; sc.pending_at = s.now; sc.scene_rx_at = s.now; bump("scenes_received"); }
+        if ((ss->player == s.pilot || s.roam) && ss->player != s.me && sharing()) { sc.pending = *ss; sc.pending_at = s.now; sc.scene_rx_at = s.now; bump("scenes_received"); }
         touch();
         return true;
     }
     if (auto* sk = std::get_if<proto::SceneSkip>(&m)) {
-        if (s.host) { if (sk->player != from || from != s.pilot) return true; s.net.relay(m, from, true); }
+        if (s.host) { if (sk->player != from || (from != s.pilot && !s.roam)) return true; s.net.relay(m, from, true); }
         log().write("coop_scene_skip_remote", JsonObj().add("player", static_cast<int>(sk->player)).add("scene", sk->scene).add("local_scene", sc.local_scene));
-        if (sk->player == s.pilot && sk->player != s.me && sharing()) {
+        if ((sk->player == s.pilot || s.roam) && sk->player != s.me && sharing()) {
             sc.skip_at = s.now; sc.next_skip_try = s.now; sc.skip_tries = 0; sc.skip_seen_playing = false;
             bump("scene_skips_received");
         }

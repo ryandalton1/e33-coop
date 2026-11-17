@@ -87,3 +87,25 @@ Defaults, applied until Ryan answers:
 - **Spectate lever changed:** the game never asks `IsAFullTeamDead`; defeat is decided inside `CheckBattleEnd` from its own lists. New lever: while a wiped team should spectate, `IsBattleEnding` is answered "yes" inside `CheckBattleEnd` (an end looks under way, none is started). Checked by `lane_spectate_host` (host wipes, fake client keeps playing with `drive_s`, expected victory).
 - **Silent player:** waited for once (30 s), then marked absent and not waited for until a result of theirs comes in again (`lane_players_absent`, `lane_players_back`).
 - **No wait limit by default (Ryan, 2026-11-16):** "im fine allowing one player to stall forever, this mod is played with friends in a discord call". Players wait for each other without limit. A dropped connection still ends the wait (the player leaves the game). `-e33lanewait=S` restores a limit (the silent-player test uses 30).
+
+## F9: Free roam shares the host's story, modelled on Online Expedition (2026-11-16)
+
+Ryan asked to "mimic the way online expedition does shared story progress" (its Nexus 820 feature list, pasted 2026-11-16), after rejecting per-player stories.
+
+- **Why not separate stories:** with each player's own story, a story boss would be fought once per player, and a cutscene that ends in a fight cuts off friends watching the same scene.
+- **Why not story-only gathering:** probe 2026-11-16 (tools/dev/probe-defeat.ps1 -Talk, new game, Lumière): all five conversations, story and side, come through the same `ActivateDialogue`. There is no story/side marker; story ones only carry their own script data.
+- **Model (Online Expedition):**
+  - The host's story is the party's: quests, interacted objects, map sections and flags follow the host. A follower's world actions count for the party.
+  - Cutscenes play for everyone, whoever triggers them. Online Expedition skips by vote.
+  - Conversation lines play for the whole party, with no gathering.
+  - Followers travel with the host's zone changes; F6 teleports to the host.
+  - Fights pull everyone in (already built, lanes).
+- **Phase 1 (this commit):**
+  - Only the host publishes map changes; followers travel with them.
+  - SceneStart and SceneSkip are accepted from anyone and replayed everywhere, after the existing gather.
+  - Any player's skip skips for all (a vote is phase 2).
+- **Phase 2:**
+  - Followers' world interactions are sent to the host and applied there; followers are repaired in place from the host (upstream D38 repair; no snapshot reload in roam).
+  - Conversation lines (speaker, text) are shown on every screen.
+  - Skip by vote.
+- **Kept from the fork, unlike Online Expedition:** lane combat with each player's own party (party profiles), not a borrowed host party.

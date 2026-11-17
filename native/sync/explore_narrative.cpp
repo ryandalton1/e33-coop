@@ -230,7 +230,7 @@ void scene_tick()
         bump("scene_syncs_skipped");
         sc.pending.reset();
     };
-    if (is_pilot()) return drop("pilot");
+    if (is_pilot() && !s.roam) return drop("pilot");   // fork : en exploration libre, chacun « pilote » ; scène d'un autre rejouée
     // Déjà dans une scène ici, ou même scène commencée ici récemment (le pion suiveur a traversé la zone) : rien.
     if (s.local_narr || game::playing_cinematic() || game::in_dialogue()) return drop("already_narrative");
     if (!key.empty() && sc.local_scene == key && s.now - sc.local_scene_at < 120) return drop("already_started");

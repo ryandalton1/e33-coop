@@ -197,6 +197,7 @@ void subscribe()
     });
     bus.post(L"/Game/jRPGTemplate/Blueprints/Basics/BP_jRPG_GI_Custom.BP_jRPG_GI_Custom_C:ChangeMap", [](HookCtx&, UFunction*) {
         if (s.replaying || !s.active || s.ended || !is_pilot() || !sharing()) return;   // pas pendant le chargement de l'instantané
+        if (s.roam && !s.host) return;   // fork : exploration libre, seuls les changements de niveau de l'hôte entraînent l'équipe
         std::string level, tag;
         if (!game::map_destination(level, tag) || is_menu_level(level)) return;   // retour au menu : pas une transition
         s.net.publish(proto::MapChange{++s.seq, level, tag}, true);
