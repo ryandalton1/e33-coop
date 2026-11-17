@@ -491,10 +491,16 @@ void lane_release(const char* why)
 // down): the check would see the dead heroes first and pick defeat (seen in game 2026-11-16), so victory is forced.
 void lane_victory()
 {
+    auto& b = s.battle;
     if (!local_wiped()) { check_battle_end("merge"); return; }
+    if (b.lane_victory_done) return;
+    b.lane_victory_done = true;
+    b.lane_victory_pending = false;
+    b.lane_forcing_end = true;                           // our own end: not held by lane_check_end
     std::string how;
     bool ok = game::force_battle_end(game::EndVictory, false, how);
     if (!ok) { std::string how2; ok = game::force_battle_end(game::EndVictory, true, how2); how += " / " + how2; }
+    b.lane_forcing_end = false;
     bump(ok ? "lane_spectator_victories" : "lane_spectator_victory_failures");
     log().write("lane_spectator_victory", JsonObj().add("ok", ok).add("how", how), s.battle.turn);
 }
@@ -668,8 +674,16 @@ void lane_check_end(bool pre)
 {
     auto& b = s.battle;
     if (!pre) { b.lane_in_check = false; return; }
-    b.lane_in_check = should_spectate();
-    if (b.lane_in_check) enter_spectate("check_battle_end");
+    if (b.lane_forcing_end || !b.lanes || !b.active || b.ending || !local_wiped()) { b.lane_in_check = false; return; }
+    if (any_enemy_alive()) {
+        b.lane_in_check = other_team_alive();            // another team fights on: we watch
+        if (b.lane_in_check) enter_spectate("check_battle_end");
+        return;
+    }
+    // Every enemy dead while our heroes are down (the merge killed the last one; the game checks inside that kill and
+    // would see our dead heroes first: defeat, seen in game 2026-11-16): held, and victory is forced from the tick.
+    b.lane_in_check = true;
+    b.lane_victory_pending = true;
 }
 
 void lane_is_battle_ending(bool& result)
@@ -693,6 +707,7 @@ void lane_tick()
 {
     auto& b = s.battle;
     if (!b.lanes || !b.active || b.ending) return;
+    if (b.lane_victory_pending) { lane_release("victory"); lane_victory(); return; }
     // Waiting banner (the game animates meanwhile).
     if (b.lane_pending && s.now - b.lane_pending_since > kBannerAfterS) {
         const std::string w = waiting_names();

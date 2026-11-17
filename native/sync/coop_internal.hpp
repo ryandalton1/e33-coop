@@ -277,7 +277,10 @@ struct Battle {
     uint32_t lane_spectate_wait_turn = 0;                  // hôte spectateur : tour des clients attendu
     double lane_spectate_since = 0;
     bool lane_defeat_checked = false;
-    bool lane_in_check = false;                            // dans CheckBattleEnd, équipe à terre à garder en spectatrice
+    bool lane_in_check = false;
+    bool lane_victory_pending = false;                     // ennemis tous morts, équipe d'ici à terre : victoire à forcer
+    bool lane_victory_done = false;
+    bool lane_forcing_end = false;                         // dans notre ForceBattleEnd (pas retenu)                            // dans CheckBattleEnd, équipe à terre à garder en spectatrice
     std::set<uint8_t> lane_absent;                         // hôte : joueurs muets (attendus une fois), plus attendus
 };
 
