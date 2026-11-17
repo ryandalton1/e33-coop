@@ -34,6 +34,8 @@ constexpr Entry kTexts[] = {
     {"lane_intent", "{0} prépare {1} → {2}", "{0} is preparing {1} → {2}"},
     {"lane_intent_aim", "un tir", "a shot"},
     {"lane_intent_attack", "une attaque", "an attack"},
+    {"lane_watch", "{0} : {1} → {2}, −{3}", "{0}: {1} → {2}, −{3}"},
+    {"lane_watch_shot", "un tir", "a shot"},
     {"lane_feed", "Vos coéquipiers : {0} dégâts", "Your teammates: {0} damage"},
     {"lane_feed_kill", "Vos coéquipiers : {0} dégâts, {1} ennemi(s) achevé(s)", "Your teammates: {0} damage, {1} enemy(ies) finished"},
     {"lane_player_wiped", "L'équipe de {0} est à terre", "{0}'s party is down"},

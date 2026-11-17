@@ -249,6 +249,7 @@ void damage_feed(const std::vector<proto::EnemyState>& base, const std::vector<p
         if (m.dead && l && !l->dead) ++kills;
     }
     if (total < 1) return;
+    if (s.battle.lane_watch_any && !kills) return;      // already replayed line by line
     bump("lane_feed_shown");
     ui::toast(kills ? "lane_feed_kill" : "lane_feed", {short_hp(total), std::to_string(kills)}, 3.0);
 }
@@ -282,6 +283,8 @@ void show_intent(uint8_t player, const proto::IntentPreview& ip)
         UObject* e = game::find_unit(false, t.spot);
         target += (target.empty() ? "" : ", ") + (e ? game::char_class(e) : std::to_string(t.spot));
     }
+    if (!what.empty() && !ip.aiming) s.battle.lane_watch_what[player] = what;
+    else if (ip.aiming) s.battle.lane_watch_what[player] = ui::text("lane_watch_shot");
     if (what.empty() && target.empty()) { ui::clear_status("lane_intent"); return; }
     ui::set_status("lane_intent", "lane_intent", {player_name(player), what, target});
     bump("lane_intents_shown");
@@ -304,6 +307,69 @@ void reset_base()
     b.lane_live_applied.clear();
     b.lane_live_seen.clear();
     b.lane_live_sent.clear();
+    b.lane_watch_any = false;
+}
+
+// --- Teammates' turn, replayed (Ryan 2026-11-17: "show teammates turn when you're done with your own") -----------------
+// Each teammate hit we receive (LaneLive) becomes a line: who, which hero, what (their last intent), on whom, how much.
+// Hits within 0.6 s on the same enemy are one line. Lines wait while we play our own hero's turn, then play one by one.
+std::string pretty_name(std::string n)
+{
+    for (const char* pre : {"BP_EnemyBattle_", "BP_Enemy_", "BP_"}) if (n.rfind(pre, 0) == 0) { n = n.substr(std::string(pre).size()); break; }
+    if (n.size() > 2 && n.compare(n.size() - 2, 2, "_C") == 0) n.resize(n.size() - 2);
+    for (auto& c : n) if (c == '_') c = ' ';
+    return n;
+}
+
+std::string teammate_hero(uint8_t player, uint32_t turn)
+{
+    // Same turn, same slot everywhere (aligned speeds): their hero in the slot ours played that turn.
+    auto st = s.battle.lane_turn_spot.find(turn);
+    if (st == s.battle.lane_turn_spot.end()) return {};
+    const int spot = st->second;
+    auto it = s.battle.lane_heroes.find(player);
+    if (it == s.battle.lane_heroes.end()) return {};
+    for (const auto& h : it->second.heroes) if (h.spot == spot) return hero_name(h.cls);
+    return {};
+}
+
+void watch_hit(uint8_t player, uint32_t turn, uint8_t spot, UObject* enemy, double dmg)
+{
+    auto& w = s.battle.lane_watch;
+    for (auto it = w.rbegin(); it != w.rend(); ++it) {
+        if (it->player != player) continue;
+        if (it->spot == spot && s.now - it->at < 0.6) { it->dmg += dmg; it->at = s.now; return; }
+        break;
+    }
+    if (w.size() >= 12) w.erase(w.begin());
+    Battle::WatchLine l;
+    l.player = player;
+    l.hero = teammate_hero(player, turn);
+    auto wit = s.battle.lane_watch_what.find(player);
+    l.what = wit == s.battle.lane_watch_what.end() ? ui::text("lane_intent_attack") : pretty_name(wit->second);
+    l.target = enemy ? pretty_name(game::char_class(enemy)) : std::to_string(spot);
+    l.spot = spot;
+    l.dmg = dmg;
+    l.at = s.now;
+    w.push_back(std::move(l));
+}
+
+void watch_tick()
+{
+    auto& b = s.battle;
+    // Our own hero is acting: lines wait (Ryan: "when you're done with your own").
+    const bool own_turn = !b.lane_pending && !b.lane_spectating && b.lane_turn_hero.count(b.turn) && b.lane_turn_hero[b.turn];
+    if (b.lane_watch_shown_at >= 0 && s.now - b.lane_watch_shown_at > 2.5) { ui::clear_status("lane_watch"); b.lane_watch_shown_at = -1; }
+    if (own_turn || b.lane_watch.empty() || s.now < b.lane_watch_next) return;
+    const auto l = b.lane_watch.front();
+    if (s.now - l.at < 0.6) return;                      // still collecting this action's hits
+    b.lane_watch.erase(b.lane_watch.begin());
+    const std::string who = player_name(l.player) + (l.hero.empty() ? "" : " · " + l.hero);
+    ui::set_status("lane_watch", "lane_watch", {who, l.what, l.target, short_hp(l.dmg)});
+    b.lane_watch_shown_at = s.now;
+    b.lane_watch_next = s.now + 1.5;
+    b.lane_watch_any = true;
+    bump("lane_watch_lines");
 }
 
 // Local enemy state as if teammates' live damage had not been applied here (living enemies only: a local kill is real
@@ -336,6 +402,7 @@ void live_apply(const proto::LaneLive& m)
         write_hp(st, next);
         b.lane_live_applied[d.spot] += cur - next;
         bump("lane_live_hits");
+        watch_hit(m.player, m.turn, d.spot, ch, inc);
     }
 }
 
@@ -438,6 +505,7 @@ void lane_turn_begin()
     // held); here only when nothing is pending (turn 1, or a turn the game did not hold).
     if (!b.lane_pending) reset_base();
     b.lane_turn_hero[b.turn] = game::is_player(game::current_character());
+    if (b.lane_turn_hero[b.turn]) b.lane_turn_spot[b.turn] = game::spot(game::current_character());
     for (auto it = b.lane_results.begin(); it != b.lane_results.end();) it = it->first + 4 < b.turn ? b.lane_results.erase(it) : std::next(it);
     for (auto it = b.lane_syncs.begin(); it != b.lane_syncs.end();) it = it->first + 4 < b.turn ? b.lane_syncs.erase(it) : std::next(it);
 }
@@ -642,7 +710,7 @@ void lane_on_battle_end(int result)
     }
     if (b.lane_pending || b.lane_dep_active) lane_release("battle end");
     // Status lines of the fight (teammate strip, intents, waiting) stayed on screen after it (playtest 2026-11-16).
-    for (const char* k : {"lanes", "lane_intent", "lane_wait"}) ui::clear_status(k);
+    for (const char* k : {"lanes", "lane_intent", "lane_wait", "lane_watch"}) ui::clear_status(k);
     if (s.role == Role::Client && result == game::EndDefeat && b.host_end < 0) {
         b.lane_wiped.insert(s.my_player_id);
         send_hero_status(b.turn);
@@ -951,6 +1019,7 @@ void lane_tick()
     }
     live_send();
     lane_parts_tick();
+    watch_tick();
     // Waiting banner (the game animates meanwhile).
     if (b.lane_pending && s.now - b.lane_pending_since > kBannerAfterS) {
         const std::string w = waiting_names();

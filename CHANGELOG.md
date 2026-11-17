@@ -35,6 +35,8 @@ E33 Lanes (fork), first test release. Notes in English.
 - Free roam: the AI party members walking behind you are hidden; it's just you (switching characters still works).
   They come back during cutscenes and conversations. This also removes the extra party member a friend's character
   brought along.
+- Lane combat: once your hero has acted, a line replays your teammates' actions one by one ("Friend · Lune: a shot →
+  Portier, −245").
 - Lane combat: teammates' damage lands on your enemies as they hit, not only at the end of the turn. Enemies only
   die at the end of the turn (live damage stops at 1 HP).
 

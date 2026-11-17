@@ -288,11 +288,19 @@ struct Battle {
     std::map<uint8_t, std::map<uint8_t, double>> lane_live_seen;   // joueur -> ennemi -> cumul déjà appliqué (tour de la base)
     std::map<uint8_t, proto::LaneLive> lane_live_early;    // joueur -> cumul d'un tour pas encore commencé ici
     // Points faibles partagés (LanePart) : zones touchées ici, à vérifier (cassées -> envoyées) ; zones déjà partagées.
+    // Tour des coéquipiers rejoué (ligne « lane_watch ») : leurs actions, montrées quand notre propre tour est fini.
+    struct WatchLine { uint8_t player = 0; std::string hero, what, target; uint8_t spot = 0; double dmg = 0; double at = 0; };
+    std::vector<WatchLine> lane_watch;                     // à montrer, dans l'ordre
+    std::map<uint8_t, std::string> lane_watch_what;        // dernière intention de chaque coéquipier
+    double lane_watch_next = 0;                            // prochaine ligne pas avant
+    double lane_watch_shown_at = -1;                       // ligne affichée depuis
+    bool lane_watch_any = false;                           // une ligne montrée depuis la dernière base (résumé inutile)
     struct LanePartCheck { uint8_t spot = 0; uint8_t part = 0; double at = 0; };
     std::vector<LanePartCheck> lane_part_checks;
     std::set<std::pair<uint8_t, uint8_t>> lane_parts_shared;   // (ennemi, zone) cassée chez quelqu'un : coupée partout
     std::map<uint8_t, double> lane_live_sent;              // ennemi -> notre cumul déjà envoyé
     std::map<uint32_t, bool> lane_turn_hero;               // tour -> un héros joue (dégâts en direct envoyés)
+    std::map<uint32_t, int> lane_turn_spot;                // tour -> emplacement de notre héros (même emplacement chez les autres)
     uint16_t lane_live_seq = 0;
     double lane_live_at = 0;
 };
