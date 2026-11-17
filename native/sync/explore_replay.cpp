@@ -38,7 +38,9 @@ void replay_tick()
             return;
         }
         UObject* target = ue::find_object(ue::from_utf8(wi.actor).c_str());
-        if (target && s.roam && !roam_shared_interaction(target)) {   // fork : PNJ, ennemis, mouvement : pas rejoués
+        // Fork : coffres et ramassages toujours rejoués ; le reste seulement pendant un événement (meneur, filtré par
+        // l'hôte) ; mouvement et ennemis jamais.
+        if (target && s.roam && (roam_movement_interaction(target) || (!roam_shared_interaction(target) && !story_active()))) {
             bump("roam_interactions_not_shared");
             return;
         }

@@ -175,6 +175,9 @@ void on_local_scene(proto::NarrativeKind kind, const std::string& id, const std:
                                               .add("zone_age_s", sc.zone_at < 0 ? -1.0 : s.now - sc.zone_at)
                                               .add("interaction_age_s", sc.interaction_at < 0 ? -1.0 : s.now - sc.interaction_at));
     if (!publish) return;
+    // Fork : scène lancée ici hors événement (zone traversée, game action) : on mène l'événement (demande avant le
+    // SceneStart, même canal fiable : l'hôte accorde d'abord, puis relaie la scène).
+    if (s.roam && s.story_leader == 0xFF && !s.story_requested) story_begin_local("scene");
     m.player = s.me;
     m.seq = ++sc.seq;
     if (UObject* pawn = game::explore_pawn()) {
@@ -230,7 +233,7 @@ void scene_tick()
         bump("scene_syncs_skipped");
         sc.pending.reset();
     };
-    if (is_pilot() && !s.roam) return drop("pilot");   // fork : en exploration libre, chacun « pilote » ; scène d'un autre rejouée
+    if (s.roam ? s.story_leader == s.me : is_pilot()) return drop("pilot");   // fork : le meneur de l'événement a la scène
     // Déjà dans une scène ici, ou même scène commencée ici récemment (le pion suiveur a traversé la zone) : rien.
     if (s.local_narr || game::playing_cinematic() || game::in_dialogue()) return drop("already_narrative");
     if (!key.empty() && sc.local_scene == key && s.now - sc.local_scene_at < 120) return drop("already_started");

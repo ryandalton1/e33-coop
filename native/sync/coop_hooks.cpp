@@ -94,6 +94,17 @@ void subscribe()
         if (s.role == Role::Host) host_setup_open(false);
         else if (s.role == Role::Client) client_setup_open();
     });
+    // Fork (PLAN-SHARED-STORY étape 1) : client, combat lancé ici sans combat de l'hôte (dialogue, game action, ennemi
+    // du monde) : jamais joué seul. Demandé à l'hôte (lone_fight_tick), terminé si son combat n'arrive pas.
+    bus.post(fn(game::path::BattleMgr, L"StartBattleNEW"), [](HookCtx&, UFunction*) {
+        if (s.role != Role::Client || s.peers.empty() || s.pending_start || s.battle.active) return;
+        if (s.early_start && s.now - s.early_start_at < 20.0) return;   // l'hôte vient d'annoncer ce combat
+        s.lone_fight_at = s.now;
+        s.lone_request_due = true;
+        s.lone_end_at = -1;
+        bump("lone_fights");
+        log().write("coop_lone_fight", JsonObj());
+    });
 
     // Client : le personnage qui joue est celui de l'hôte, pas celui que le jeu local a calculé. L'ordre dépend de
     // l'initiative, de l'engagement (attaque surprise) et des buffs de vitesse, qui peuvent différer : le 2026-10-20
@@ -125,6 +136,9 @@ void subscribe()
         // jouait Verso au tour 1 pendant que l'hôte jouait Maelle.
         const bool first = !s.battle.active;
         if (first && !s.pending_start && !(s.early_start && s.now - s.early_start_at < 30.0)) return;
+        // Fork : notre combat a commencé sans l'hôte : son ordre des tours n'est pas celui de ce combat (Mime du
+        // 2026-11-16 : 16 tours du Mime imposés de suite). Il est terminé ou adopté par start_pending_battle d'abord.
+        if (first && s.lone_fight_at >= 0) { bump("actor_force_skipped_lone_fight"); return; }
         auto& b = s.battle;
         const uint32_t next = first ? 1 : b.turn + 1;
         // Essai (-e33turndep=1) : TurnStart de l'hôte pas encore là -> au lieu de figer le jeu, on enregistre une
@@ -961,6 +975,7 @@ void subscribe()
         if (s.role == Role::Host) broadcast(proto::BattleEnd{b.id, static_cast<uint8_t>(game::EndNeutral)});
         bump("battles_left");
         log().write("coop_battle_left", JsonObj().add("battle", b.id));
+        lane_on_left();   // fork : couloirs, l'hôte ne nous attend plus (il attendait sans fin, 2026-11-16)
         b.end_flow_at = s.now;
     });
 }

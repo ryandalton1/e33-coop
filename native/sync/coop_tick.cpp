@@ -391,7 +391,7 @@ void tick(double dt)
     defense_context_watch();
     if (s.battle.active && !s.battle.hold && !explore::remote_paused() && !game::pause_menu_visible()) s.battle.timer_elapsed += dt;
     if (s.battle.active && !s.input_enabled) enforce_input_block();
-    if (s.role == Role::Client) start_pending_battle();
+    if (s.role == Role::Client) { lone_fight_tick(); start_pending_battle(); }
     { prof::Scope p("explore"); explore::tick(s.now); }
     { prof::Scope p("lanes"); lane_tick(); }
     if (s.role == Role::Host) roam_request_tick();   // fork : fusion des couloirs, retenue du tour sans figer

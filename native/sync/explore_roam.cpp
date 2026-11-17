@@ -12,7 +12,7 @@
 //    elsewhere); the host's BattleStart pulls everyone in (lane combat), each returns to their own position after;
 //  - a cinematic first gathers the party (teleport to the player who triggered it), then plays everywhere (upstream
 //    SceneStart replay; the narrative barrier syncs its end); dialogues themselves stay with their player;
-//  - Ctrl+F6: travel to the next player (same level: teleport; other level: change map, then teleport).
+//  - Ctrl+F6: travel to the next player (same level only: everyone shares one level, docs/PLAN-SHARED-STORY.md).
 // Puppets are spike S5. v1 (glided, teleported each frame) showed a static Gustave sliding (Ryan, 2026-11-16). v2: AI
 // controller + movement input (the game's locomotion animates it) and the sender's character (LoadAndActivateCharacter).
 #include "explore_internal.hpp"
@@ -255,10 +255,10 @@ void travel_to(uint8_t player, const char* why)
         bump(ok ? "roam_travels" : "roam_travel_failures");
         log().write("roam_travel", JsonObj().add("to", static_cast<int>(player)).add("why", why).add("same_level", true).add("ok", ok));
     } else {
-        const bool ok = game::change_map(ue::from_utf8(p.level), L"");
-        if (ok) g_travel = Travel{player, p.level, s.now};
-        bump(ok ? "roam_travel_maps" : "roam_travel_failures");
-        log().write("roam_travel", JsonObj().add("to", static_cast<int>(player)).add("why", why).add("level", p.level).add("ok", ok));
+        // Fork (histoire partagée) : un seul niveau pour tous ; jamais de voyage vers un autre niveau.
+        ui::toast("roam_other_level", {}, 4.0);
+        log().write("roam_travel", JsonObj().add("to", static_cast<int>(player)).add("why", why).add("level", p.level).add("refused", "other_level"));
+        return;
     }
     ui::toast("roam_travel", {s.net.name_of ? s.net.name_of(player) : std::to_string(player)}, 4.0);
 }
@@ -450,7 +450,7 @@ void roam_line_tick()
 
 void roam_line_remote(const proto::DialogueLine& m)
 {
-    if (m.player == s.me) return;
+    if (m.player == s.me || s.roam) return;   // fork : plus montrées (histoire partagée)
     // Pendant sa propre scène, rien par-dessus (sous-titres et voix mêlés).
     if (game::in_dialogue() || game::playing_cinematic() || game::in_battle()) { bump("roam_lines_skipped_busy"); return; }
     const std::string who = s.net.name_of ? s.net.name_of(m.player) : std::to_string(m.player);
@@ -485,6 +485,148 @@ bool roam_shared_interaction(UObject* target)
                               STR("BP_Holds_C"), STR("BP_GPE_Rope_C"), STR("BP_LightSafeArea_C")})
         if (ue::is_a(target, no)) return false;
     return ue::is_a(target, STR("BP_Chest_Regular_C")) || ue::is_a(target, STR("BP_InteractionObjectBase_C"));
+}
+
+bool roam_movement_interaction(UObject* target)
+{
+    if (!target) return false;
+    for (const wchar_t* c : {STR("BP_jRPG_Enemy_World_Base_Seamless_C"), STR("BP_GrapplePoint_C"), STR("BP_Holds_C"), STR("BP_GPE_Rope_C"),
+                             STR("BP_LightSafeArea_C")})
+        if (ue::is_a(target, c)) return true;
+    return false;
+}
+
+// --- Histoire partagée (docs/PLAN-SHARED-STORY.md) ------------------------------------------------
+// Un événement d'histoire (conversation, cinématique, document) à la fois. Celui qui le lance le mène : l'hôte
+// l'accorde (StoryEvent à tous), les autres sont rassemblés près de lui, ses interactions, choix et passages sont
+// rejoués chez eux, leurs entrées sont bloquées (is_pilot faux). Le meneur le termine quand plus rien n'est en cours
+// chez personne (barrière : NarrativeState de chacun).
+namespace {
+
+// Perdant d'un départ simultané : sa conversation locale est fermée (il rejoint celle du meneur).
+bool close_local_dialogue()
+{
+    UObject* sys = game::dialogue_system();
+    if (!sys || !game::in_dialogue()) return false;
+    UObject* dlg = ue::get_object(sys, STR("ActiveDialogue"));
+    ue::Call c(sys, STR("EndDialogue"));
+    if (!c || !dlg) return false;
+    for (const wchar_t* n : {STR("Dialogue"), STR("DialogueActor"), STR("InDialogue"), STR("Dialog")})
+        if (c.param_size(n) == sizeof(void*)) { c.set_object(n, dlg); break; }
+    s.replaying = true;
+    const bool ok = c.invoke();
+    s.replaying = false;
+    return ok;
+}
+
+void story_set(uint8_t leader, uint32_t seq, const char* why)
+{
+    const uint8_t was = s.story_leader;
+    if (seq) s.story_seq = std::max(s.story_seq, seq);
+    s.story_leader = leader;
+    s.story_quiet_since = -1;
+    s.story_end_sent_at = -1;
+    if (leader != 0xFF && leader != was) { s.story_at = s.now; bump("story_events"); }
+    log().write("story_event", JsonObj().add("leader", static_cast<int>(leader)).add("was", static_cast<int>(was)).add("why", why).add("seq", s.story_seq));
+    if (s.story_requested && leader != 0xFF) {
+        s.story_requested = false;
+        if (leader != s.me) {   // départ simultané perdu
+            const bool closed = close_local_dialogue();
+            bump("story_event_conflicts");
+            log().write("story_event_conflict", JsonObj().add("winner", static_cast<int>(leader)).add("closed_local", closed));
+        }
+    }
+    if (leader != 0xFF && leader != s.me && leader != was) roam_gather(leader);
+    if (leader == 0xFF && was != 0xFF) bump("story_events_ended");
+}
+
+void story_publish(uint8_t leader, const char* why)
+{
+    story_set(leader, ++s.story_seq, why);
+    s.net.publish(proto::StoryEvent{s.story_seq, leader}, true);
+}
+} // namespace
+
+bool story_active() { return s.roam && s.story_leader != 0xFF; }
+
+void story_begin_local(const char* why)
+{
+    if (!s.roam || !sharing()) return;
+    if (s.host) { story_on_request(s.me); return; }
+    if (s.story_requested) return;
+    s.story_requested = true;
+    s.story_request_at = s.now;
+    s.net.publish(proto::PilotRequest{s.me}, true);
+    bump("story_requests");
+    log().write("story_request", JsonObj().add("why", why));
+}
+
+void story_on_request(uint8_t from)
+{
+    if (!s.host) return;
+    if (s.story_leader != 0xFF && s.story_leader != from) {   // un autre mène déjà : le demandeur le rejoindra
+        bump("story_requests_refused");
+        log().write("story_request_refused", JsonObj().add("from", static_cast<int>(from)).add("leader", static_cast<int>(s.story_leader)));
+        if (from == s.me) { story_set(s.story_leader, 0, "refused"); return; }
+        s.net.send_to(from, proto::StoryEvent{s.story_seq, s.story_leader});
+        return;
+    }
+    if (s.story_leader == from) { if (from != s.me) s.net.send_to(from, proto::StoryEvent{s.story_seq, from}); return; }
+    if (from == s.me) s.story_requested = false;
+    story_publish(from, "granted");
+}
+
+void story_on_event(uint8_t from, const proto::StoryEvent& e)
+{
+    if (s.host) {
+        // Client meneur : fin de son événement (seul message StoryEvent accepté d'un client).
+        if (e.leader == 0xFF && (from == s.story_leader || from == s.me) && s.story_leader != 0xFF) story_publish(0xFF, from == s.me ? "leader_left" : "leader_done");
+        return;
+    }
+    if (e.seq && e.seq < s.story_seq && e.leader != 0xFF) return;   // ancien
+    story_set(e.leader, e.seq, "host");
+}
+
+bool story_relay_ok(uint8_t from, const std::string& actor)
+{
+    if (actor.rfind("freeaim:", 0) == 0) return true;
+    if (s.story_leader != 0xFF && from == s.story_leader) return true;
+    UObject* target = ue::find_object(ue::from_utf8(actor).c_str());
+    if (!target) return s.story_leader == 0xFF;   // pas chargé ici : hors événement, relayé (le receveur filtre)
+    if (roam_shared_interaction(target) || roam_movement_interaction(target)) return true;
+    // Interaction d'histoire d'un non-meneur : refusée pendant un autre événement (perdant d'un départ simultané).
+    return s.story_leader == 0xFF;
+}
+
+void story_tick()
+{
+    if (!s.roam) return;
+    if (s.story_requested && s.now - s.story_request_at > 5.0) {   // pas de réponse (hôte occupé, perdu)
+        s.story_requested = false;
+        bump("story_requests_lost");
+        log().write("story_request_lost", JsonObj());
+    }
+    if (s.story_leader == 0xFF) return;
+    if (s.host && s.now - s.story_at > 900.0) {   // filet : jamais bloqués plus de 15 min
+        bump("story_events_timeout");
+        story_publish(0xFF, "timeout");
+        return;
+    }
+    if (s.story_leader != s.me) return;
+    // Meneur : fin quand plus rien n'est en cours ici ni chez les autres (dialogue, cinématique, marchand, combat).
+    bool busy = s.local_narr || game::in_dialogue() || game::playing_cinematic() || game::in_battle() || s.choice_pending ||
+                s.merchant_open || sc.pending.has_value() || !s.interactions.empty() || !s.choices.empty() || game::map_change_in_progress();
+    for (auto& [p, on] : s.remote_narr)
+        if (on && p != s.me) busy = true;
+    if (busy) { s.story_quiet_since = -1; return; }
+    if (s.story_quiet_since < 0) { s.story_quiet_since = s.now; return; }
+    if (s.now - s.story_quiet_since < 2.5 || s.now - s.story_at < 2.0) return;
+    if (s.host) { story_publish(0xFF, "done"); return; }
+    if (s.story_end_sent_at < 0 || s.now - s.story_end_sent_at > 3.0) {
+        s.story_end_sent_at = s.now;
+        s.net.publish(proto::StoryEvent{s.story_seq, 0xFF}, true);
+        log().write("story_end_request", JsonObj().add("seq", s.story_seq));
+    }
 }
 
 void roam_reset()

@@ -62,9 +62,29 @@ void start_pending_battle()
         // Notre pion a déjà engagé un combat (il suit le pilote) : ce doit être le même.
         std::string enc, gid;
         int engage = 0;
-        if (game::battle_params(enc, gid, engage) && enc != bs.encounter) {
+        const bool params = game::battle_params(enc, gid, engage);
+        if (params && enc != bs.encounter) {
             bump("battle_encounter_mismatches");
             log().write("coop_battle_encounter_mismatch", JsonObj().add("local", enc).add("host", bs.encounter));
+        }
+        // Fork : combat lancé ici sans l'hôte. Le même au même moment (dialogue rejoué chez tous) : adopté. Un autre, ou
+        // commencé depuis longtemps (ses tours ont avancé seul) : terminé d'abord, puis celui de l'hôte est lancé.
+        if (s.lone_fight_at >= 0) {
+            const bool same = params && enc == bs.encounter && s.battle.start_rx_at - s.lone_fight_at < 10.0;
+            if (!same) {
+                if (s.lone_end_at < 0 || s.now - s.lone_end_at > 5.0) {
+                    std::string how;
+                    const bool ok = game::force_battle_end(game::EndNeutral, s.lone_end_at >= 0, how);
+                    s.lone_end_at = s.now;
+                    bump("lone_fights_replaced");
+                    log().write("coop_lone_fight_ended", JsonObj().add("why", "host_fight").add("local", enc).add("host", bs.encounter)
+                                                             .add("age_s", s.now - s.lone_fight_at).add("ok", ok).add("how", how));
+                }
+                return;   // celui de l'hôte part une fois le nôtre fini
+            }
+            bump("lone_fights_adopted");
+            log().write("coop_lone_fight_adopted", JsonObj().add("encounter", enc).add("age_s", s.now - s.lone_fight_at));
+            s.lone_fight_at = -1;
         }
     } else if (!bs.world_enemy.empty()) {
         if (UObject* enemy = game::find_world_enemy(bs.world_enemy)) started = game::start_world_battle(enemy, ue::from_utf8(bs.encounter), bs.engage, err);
@@ -78,6 +98,8 @@ void start_pending_battle()
         return;
     }
     s.pending_start.reset();
+    s.lone_fight_at = -1;
+    s.lone_end_at = -1;
     s.battle.active = true;
     s.battle.world_enemy = bs.world_enemy;
     s.battle.enemy_global_id = bs.enemy_global_id;
@@ -97,6 +119,50 @@ void start_pending_battle()
                                                    .add("snapshot_age_s", snap ? s.now - s.early_turn_at : -1.0));
         s.early_turn.reset();
         on_turn_start(cur);
+    }
+}
+
+// Fork (PLAN-SHARED-STORY étape 1) : combat lancé ici sans combat de l'hôte. Demande envoyée (avec la rencontre) si
+// StartBattle de l'ennemi ne l'a pas déjà fait ; sans combat de l'hôte au bout de kLoneFightS, il est terminé.
+void lone_fight_tick()
+{
+    constexpr double kLoneFightS = 15.0;
+    if (s.lone_fight_at < 0) return;
+    if (s.battle.active || s.peers.empty()) { s.lone_fight_at = -1; s.lone_request_due = false; s.lone_end_at = -1; return; }
+    const bool fighting = game::in_battle();
+    if (!fighting && s.now - s.lone_fight_at > 2.0) {           // fini ici (fuite, défaite, notre fin forcée)
+        if (s.lone_end_at >= 0) log().write("coop_lone_fight_gone", JsonObj().add("after_end_s", s.now - s.lone_end_at));
+        s.lone_fight_at = -1; s.lone_request_due = false; s.lone_end_at = -1;
+        return;
+    }
+    // 2 s : un combat de dialogue rejoué chez l'hôte (événement d'histoire) y démarre de lui-même ; sa BattleStart suffit.
+    if (s.lone_request_due && (s.pending_start || s.now - s.lone_fight_at > 2.0)) {
+        s.lone_request_due = false;
+        if (!s.pending_start && s.battle_request_at < s.lone_fight_at - 1.0) {          // pas de demande par StartBattle (combat de dialogue…)
+            proto::BattleStart rq;
+            std::string gid;
+            int engage = 0;
+            if (game::battle_params(rq.encounter, gid, engage)) rq.engage = static_cast<uint8_t>(engage);
+            rq.party = game::party_names();
+            for (auto& peer : s.peers) send_to(peer, rq);
+            s.battle_request_at = s.now;
+            bump("lone_fight_requests");
+            log().write("coop_lone_fight_request", JsonObj().add("encounter", rq.encounter));
+        }
+    }
+    if (s.pending_start) return;                                  // le combat de l'hôte arrive : start_pending_battle décide
+    if (s.lone_end_at < 0 && s.now - s.lone_fight_at > kLoneFightS) {
+        std::string how;
+        const bool ok = game::force_battle_end(game::EndNeutral, false, how);
+        s.lone_end_at = s.now;
+        bump("lone_fights_ended");
+        ui::toast("lone_fight_ended", {}, 6.0);
+        log().write("coop_lone_fight_ended", JsonObj().add("why", "no_host_fight").add("ok", ok).add("how", how));
+    } else if (s.lone_end_at >= 0 && s.now - s.lone_end_at > 5.0 && s.now - s.lone_end_at < 6.0) {
+        std::string how;
+        const bool ok = game::force_battle_end(game::EndNeutral, true, how);   // second essai, chemin direct
+        s.lone_end_at = s.now - 6.0;
+        log().write("coop_lone_fight_end_retry", JsonObj().add("ok", ok).add("how", how));
     }
 }
 

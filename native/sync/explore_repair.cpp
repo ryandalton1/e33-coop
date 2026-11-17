@@ -218,7 +218,7 @@ void on_local_flag(UObject* id, bool value)
 
 void on_flag_set(const proto::FlagSet& f)
 {
-    if (!world_repair_on() || is_pilot()) return;
+    if (!world_repair_on() || (is_pilot() && !s.roam)) return;   // fork : drapeaux de n'importe qui, monde de l'hôte
     if (s.flags_in.size() >= 512) s.flags_in.pop_front();
     s.flags_in.push_back(f);
 }

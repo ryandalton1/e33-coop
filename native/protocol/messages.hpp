@@ -32,7 +32,8 @@ namespace e33::proto {
 //      HeroStatus. Le magic du fork diffère de l'amont, donc pas de dialogue croisé quelle que soit la version.
 // v8 (fork E33Lanes) : EnemyDelta.buffs_added/buffs_removed (fusion des statuts, phase 4), SessionMode (couloirs,
 //      exploration libre, réglages de l'hôte annoncés aux clients).
-// v10 (fork E33Lanes) : LaneLive (dégâts d'un joueur en direct pendant le tour, montrés chez les autres avant la fusion).
+// v10 (fork E33Lanes) : LaneLive (dégâts d'un joueur en direct pendant le tour, montrés chez les autres avant la fusion) ;
+//      StoryEvent (meneur de l'événement d'histoire partagé, docs/PLAN-SHARED-STORY.md).
 inline constexpr uint16_t kProtocolVersion = 10;
 inline constexpr uint32_t kMagic = 0x4C333345; // "E33L" (fork E33Lanes ; amont : 0x43333345 "E33C")
 
@@ -50,6 +51,7 @@ enum class MsgType : uint16_t {
     SessionMode = 84,                                        // fork E33Lanes (v8)
     DialogueLine = 85,                                       // fork E33Lanes (v9)
     LaneLive = 86,                                           // fork E33Lanes (v10)
+    StoryEvent = 87,                                         // fork E33Lanes (v10)
 };
 
 const char* type_name(MsgType t);
@@ -433,6 +435,9 @@ struct SessionMode { uint8_t lanes = 0; uint8_t freeroam = 0; double lane_hp = 0
 struct DialogueLine { uint8_t player = 0; uint32_t seq = 0; std::string speaker; std::string text; std::string sound; };
 // v10: a player's own HP damage to each enemy so far this turn (cumulative, >= 0), streamed while the turn plays so
 // teammates see it land. Display only: receivers never kill with it; the turn's LaneResult / EnemyStateSync decide.
+// v10: host -> all. A shared story event (conversation, cutscene, document) is led by `leader` (0xFF: none, event over).
+// Only the leader's interactions, choices and skips are replayed; everyone else is gathered and watches.
+struct StoryEvent { uint32_t seq = 0; uint8_t leader = 0xFF; };
 struct LaneDamage { uint8_t spot = 0; double hp = 0; };
 struct LaneLive {                         // player -> host -> others
     uint32_t battle_id = 0;
@@ -449,7 +454,7 @@ using Message = std::variant<Hello, Welcome, Reject, Bye, Ping, Pong, BattleStar
                              WorldInteract, DialogueChoice, MapChange, NarrativeState, BarrierRelease, PauseState,
                              Owners, BattleReady, Roster, WorldHash, ResyncRequest, BuildOffer, BuildChunk, EconomyDelta,
                              IntentPreview, AimView, MenuState, SceneStart, SceneSkip, DefeatChoice, EnemyActionDone,
-                             FlagSet, WorldLeavesRequest, WorldLeaves, LaneResult, EnemyStateSync, HeroStatus, SessionMode, DialogueLine, LaneLive>;
+                             FlagSet, WorldLeavesRequest, WorldLeaves, LaneResult, EnemyStateSync, HeroStatus, SessionMode, DialogueLine, LaneLive, StoryEvent>;
 
 MsgType type_of(const Message& m);
 // Sérialise un message (type u16 + longueur u16 + charge utile).

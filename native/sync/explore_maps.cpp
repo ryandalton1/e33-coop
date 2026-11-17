@@ -218,7 +218,7 @@ void on_map_change(const proto::MapChange& mc)
 
 void pending_map_tick()
 {
-    if (!s.pending_map || is_pilot()) { s.pending_map.reset(); return; }
+    if (!s.pending_map || (is_pilot() && !s.roam)) { s.pending_map.reset(); return; }   // fork : chacun suit les MapChange
     if (!sharing() || !world_ready()) return;
     const proto::MapChange mc = *s.pending_map;
     apply_map_change(mc);

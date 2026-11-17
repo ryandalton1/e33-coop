@@ -216,6 +216,7 @@ void on_peer_left(uint8_t player)
     s.remote_pause.erase(player);
     presence::forget(player);
     roam_peer_left(player);
+    if (s.host && s.roam && s.story_leader == player) story_on_event(player, proto::StoryEvent{0, 0xFF});   // meneur parti
     if (s.host && s.pilot == player) { set_pilot(0, "pilot left"); s.net.publish(proto::PilotChange{0}, true); }
 }
 
@@ -318,6 +319,7 @@ bool handle(uint8_t from, const proto::Message& m)
     if (auto* pr = std::get_if<proto::PilotRequest>(&m)) {
         if (!s.host) return true;
         if (pr->player != from) return true;
+        if (s.roam) { story_on_request(from); return true; }   // fork : demande de mener un événement d'histoire
         set_pilot(from, "request");
         s.net.publish(proto::PilotChange{from}, true);
         return true;
@@ -331,21 +333,23 @@ bool handle(uint8_t from, const proto::Message& m)
     // Fork, exploration libre, histoire partagée façon Online Expedition (décision F9) : l'histoire est celle de l'hôte.
     //  - changements de niveau : ceux de l'hôte seulement (seul l'hôte les publie) ; les suiveurs voyagent avec lui ;
     //  - cinématiques (SceneStart) et passages (SceneSkip) : de n'importe qui, rejoués chez tous (rassemblement d'abord) ;
-    //  - interactions et choix de dialogue : pas rejoués (chacun les siens ; état repris de l'hôte, phase 2).
-    //  - interactions : de n'importe qui, relayées par l'hôte ; rejouées seulement pour les objets d'état (replay_tick) ;
-    //  - répliques de dialogue (DialogueLine) : de n'importe qui, montrées et entendues chez tous.
-    if (s.roam && std::holds_alternative<proto::DialogueChoice>(m)) { bump("roam_replays_ignored"); return true; }
+    // Fork, histoire partagée (docs/PLAN-SHARED-STORY.md, remplace F9) : un événement d'histoire à la fois, mené par
+    // celui qui l'a lancé (StoryEvent) ; ses interactions, choix et passages sont rejoués chez tous.
+    //  - coffres et ramassages : de n'importe qui, rejoués chez tous, sans événement ;
+    //  - répliques (DialogueLine) : plus montrées (tout le monde voit la scène elle-même), relayées pour les anciens.
+    if (auto* se = std::get_if<proto::StoryEvent>(&m)) { story_on_event(from, *se); return true; }
     if (auto* dl = std::get_if<proto::DialogueLine>(&m)) {
         if (s.host) { if (dl->player != from) return true; s.net.relay(m, from, true); }
-        if (s.roam && sharing()) roam_line_remote(*dl);
         return true;
     }
     if (auto* wi = std::get_if<proto::WorldInteract>(&m); wi && s.roam) {
-        if (s.host) s.net.relay(m, from, true);
+        if (s.host) {
+            if (!story_relay_ok(from, wi->actor)) { bump("story_interactions_refused"); return true; }
+            s.net.relay(m, from, true);
+        }
         if (sharing()) { s.interactions.push_back(*wi); touch(); }
         return true;
     }
-    if (s.roam && s.host && std::holds_alternative<proto::MapChange>(m)) { bump("roam_client_map_changes_ignored"); return true; }
     // Drapeau persistant du pilote (D38) : relayé par l'hôte depuis le pilote seulement, comme WorldInteract.
     if (auto* fl = std::get_if<proto::FlagSet>(&m)) {
         if (s.host) { if (from != s.pilot && !s.roam) return true; s.net.relay(m, from, true); }
@@ -359,7 +363,8 @@ bool handle(uint8_t from, const proto::Message& m)
         return true;
     }
     if (auto* dc = std::get_if<proto::DialogueChoice>(&m)) {
-        if (s.host) { if (from != s.pilot) return true; s.net.relay(m, from, true); }
+        if (s.host) { if (from != (s.roam ? s.story_leader : s.pilot)) return true; s.net.relay(m, from, true); }
+        if (s.roam && !story_active()) { bump("roam_choices_no_event"); return true; }
         if (dc->hover == 1) { s.choice_hover_want = dc->index; return true; }   // survol seulement : surbrillance, pas de choix
         if (dc->hover == 2) { s.merchant_want = dc->index; if (s.merchant_seen_at < 0) s.merchant_seen_at = s.now; return true; }   // article du marchand sélectionné par le pilote
         if (dc->hover == 3) { s.merchant_close = true; s.merchant_want = -1; s.merchant_buy = -1; s.merchant_seen_at = -1; s.merchant_open_tried = false; return true; }   // le pilote a fermé la fenêtre
@@ -370,7 +375,18 @@ bool handle(uint8_t from, const proto::Message& m)
         return true;
     }
     if (auto* mc = std::get_if<proto::MapChange>(&m)) {
-        if (s.host) { if (from != s.pilot) return true; s.net.relay(m, from, true); }
+        if (s.host) {
+            if (from != s.pilot && !s.roam) return true;
+            // Fork (étape 2) : changements de niveau de n'importe qui. Deux à la fois : le premier arrivé chez l'hôte
+            // gagne (l'hôte déjà en route vers un autre niveau garde le sien ; ce joueur suivra le MapChange de l'hôte).
+            std::string dest, tag;
+            if (s.roam && game::map_change_in_progress() && game::map_destination(dest, tag) && dest != mc->level) {
+                bump("roam_map_changes_conflicts");
+                log().write("roam_map_change_conflict", JsonObj().add("from", static_cast<int>(from)).add("wanted", mc->level).add("host_to", dest));
+                return true;
+            }
+            s.net.relay(m, from, true);
+        }
         on_map_change(*mc);
         return true;
     }
@@ -378,7 +394,8 @@ bool handle(uint8_t from, const proto::Message& m)
         if (s.host) { if (ns->player != from) return true; s.net.relay(m, from, true); }
         // Fork, exploration libre : les dialogues restent ceux de leur joueur (pas de barrière) ; une cinématique de
         // l'histoire rassemble l'équipe (on rejoint le joueur, puis la barrière synchronise la fin).
-        if (s.roam && ns->player != s.me) {
+        // Fork : pendant un événement d'histoire, dialogues et cinématiques de tous passent par la barrière.
+        if (s.roam && ns->player != s.me && !story_active()) {
             if (ns->kind == proto::NarrativeKind::Dialogue) { bump("roam_dialogues_local"); return true; }
             if (ns->active && !s.remote_narr[ns->player]) roam_gather(ns->player);
         }
@@ -391,24 +408,18 @@ bool handle(uint8_t from, const proto::Message& m)
     }
     if (std::get_if<proto::BarrierRelease>(&m)) return true;
     if (auto* ss = std::get_if<proto::SceneStart>(&m)) {
-        if (s.host) { if (ss->player != from || (from != s.pilot && !s.roam)) return true; s.net.relay(m, from, true); }
+        if (s.host) { if (ss->player != from || from != (s.roam ? s.story_leader : s.pilot)) { bump("scene_starts_refused"); return true; } s.net.relay(m, from, true); }
         log().write("coop_scene_remote", JsonObj().add("player", static_cast<int>(ss->player)).add("scene", ss->scene).add("sequence", ss->sequence)
                                              .add("cause", static_cast<int>(ss->cause)).add("cause_path", ss->cause_path).add("action", ss->action));
-        if ((ss->player == s.pilot || s.roam) && ss->player != s.me && sharing()) { sc.pending = *ss; sc.pending_at = s.now; sc.scene_rx_at = s.now; bump("scenes_received"); }
+        if (ss->player == (s.roam ? s.story_leader : s.pilot) && ss->player != s.me && sharing()) { sc.pending = *ss; sc.pending_at = s.now; sc.scene_rx_at = s.now; bump("scenes_received"); }
         touch();
         return true;
     }
     if (auto* sk = std::get_if<proto::SceneSkip>(&m)) {
-        if (s.host) { if (sk->player != from || (from != s.pilot && !s.roam)) return true; s.net.relay(m, from, true); }
+        if (s.host) { if (sk->player != from || from != (s.roam ? s.story_leader : s.pilot)) return true; s.net.relay(m, from, true); }
         log().write("coop_scene_skip_remote", JsonObj().add("player", static_cast<int>(sk->player)).add("scene", sk->scene).add("local_scene", sc.local_scene));
-        // Fork, exploration libre : un passage ne passe que sa propre scène (pas de vote possible : un hook ne peut pas
-        // annuler SkipCinematic) ; les autres sont prévenus, la barrière fait attendre celui qui a passé.
-        if (s.roam && sk->player != s.me) {
-            ui::toast("roam_skipped", {s.net.name_of ? s.net.name_of(sk->player) : std::to_string(sk->player)}, 5.0);
-            bump("roam_skips_seen");
-            return true;
-        }
-        if ((sk->player == s.pilot || s.roam) && sk->player != s.me && sharing()) {
+        // Fork : le passage du meneur de l'événement passe la scène chez tous (comme le pilote d'origine).
+        if (sk->player == (s.roam ? s.story_leader : s.pilot) && sk->player != s.me && sharing()) {
             sc.skip_at = s.now; sc.next_skip_try = s.now; sc.skip_tries = 0; sc.skip_seen_playing = false;
             bump("scene_skips_received");
         }
@@ -430,13 +441,13 @@ void tick(double now)
     if (s.ended) return;
     s.now = now;
     { prof::Scope p("map"); map_tick(); }
-    if (!s.host || !is_pilot()) pending_map_tick();
+    if (!s.host || !is_pilot() || s.roam) pending_map_tick();   // fork : MapChange de n'importe qui, hôte compris
     if (s.host) host_join_tick();
     else client_join_tick();
     key_tick();
-    if (is_pilot()) { sprint_release(); pilot_tick(); }
+    if (is_pilot() || s.roam) { sprint_release(); pilot_tick(); }   // fork : position publiée même en spectateur
     else if (!scene_test_no_follow()) { prof::Scope p("follow"); follow_tick(); }
-    if (s.roam) { prof::Scope p("roam"); roam_tick(); }
+    if (s.roam) { prof::Scope p("roam"); roam_tick(); story_tick(); }
     mount::tick(s.now);   // pion fantôme rendu si le suivi s'est arrêté
     follow_stats_flush(false);
     {   // Mouvement en cours (pilote vu d'ici, ou pion local) : pas de rechargement d'instantané (world_resync_tick).
@@ -468,7 +479,8 @@ int joined_players()
 
 uint8_t pilot() { return s.pilot; }
 
-bool is_pilot() { return s.roam || s.pilot == s.me; }   // fork : en exploration libre, chacun pilote son pion
+// Fork : en exploration libre, chacun pilote son pion, sauf pendant un événement d'histoire mené par un autre.
+bool is_pilot() { return s.roam ? (s.story_leader == 0xFF || s.story_leader == s.me) : s.pilot == s.me; }
 void set_roam(bool on)
 {
     if (s.roam == on) return;

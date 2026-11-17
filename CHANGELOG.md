@@ -25,12 +25,13 @@ E33 Lanes (fork), first test release. Notes in English.
   own character. The host's story is the party's, as in Online Expedition:
   - any player running into an enemy pulls everyone into the fight, and everyone goes back to where they were after;
   - a beaten roaming enemy disappears for everyone;
-  - cutscenes play for everyone (the party is gathered first); skipping only skips your own screen;
-  - every conversation line (text and voice) is shown and heard by the whole party;
-  - the host's area changes take everyone along; chests and pickups count for everyone; gold, items, progress flags
-    and beaten enemies follow the host;
+  - shared story: anyone can talk to a character, read a document or walk into a cutscene. The party is gathered
+    next to them and watches the same scene; they pick the answers and their skip skips for everyone. One scene at a
+    time: if two players start one at once, the first one wins and the other joins it;
+  - everyone stays in the same area: anyone's area change takes the whole party along;
+  - chests and pickups count for everyone; gold, items, progress flags and beaten enemies follow the host;
   - a fight never cuts your own cutscene or conversation: it waits for it to end;
-  - Ctrl+F6: travel to the next player.
+  - Ctrl+F6: travel to the next player (same area).
 - Free roam: the AI party members walking behind you are hidden; it's just you (switching characters still works).
   They come back during cutscenes and conversations. This also removes the extra party member a friend's character
   brought along.
@@ -43,6 +44,9 @@ E33 Lanes (fork), first test release. Notes in English.
 - Lane combat: the teammate line ("X is preparing an attack…") and the teammate strip no longer stay on screen after
   the turn or the fight.
 - Lane combat: Gustave is shown as Gustave in the teammate strip, not by his internal name "Frey".
+- Free roam: a fight started from a conversation on a client (the Mime) no longer runs on that client alone. The
+  host starts it for the whole party, or it is cancelled; the enemy no longer takes every turn, and the host no
+  longer waits forever after a client leaves a fight.
 - Ctrl+F6 no longer also triggers the "Selected: <character>" ownership hotkey (unused in lane combat).
 
 ## [0.6.35] - 2026-10-25

@@ -45,6 +45,12 @@ void subscribe()
                 log().write("coop_follower_interaction", JsonObj().add("actor", path));
                 return;
             }
+            // Fork, histoire partagée : coffres et ramassages rejoués chez tous sans événement ; mouvement et ennemis
+            // jamais rejoués ; tout le reste (PNJ, documents, objets d'histoire) lance un événement mené par nous.
+            if (s.roam) {
+                if (roam_movement_interaction(ctx.Context)) return;
+                if (!roam_shared_interaction(ctx.Context) && s.story_leader == 0xFF) story_begin_local("interaction");
+            }
             s.net.publish(proto::WorldInteract{++s.seq, path, instant}, true);
             bump("interactions_published"); touch();
             sc.interaction = path; sc.interaction_at = s.now;   // cause possible d'une cinématique (SceneStart)
@@ -189,7 +195,7 @@ void subscribe()
             const std::wstring name = p->GetName();
             if (void* a = ue::param_address(ctx, f, name.c_str())) texts.push_back(ue::to_utf8(static_cast<RC::Unreal::FText*>(a)->ToString()));
         }
-        if (!texts.empty()) roam_line_local(texts[0], texts.size() > 1 ? texts[1] : std::string());
+        (void)texts;   // fork : répliques plus publiées (histoire partagée : chacun voit la scène elle-même)
     });
     bus.pre(L"/Game/Gameplay/DialogueSystem/BP_DialogueSystemComponent.BP_DialogueSystemComponent_C:PlaySoundForCharacter", [](HookCtx& ctx, UFunction* f) {
         if (!s.roam || !s.active || s.ended || s.replaying) return;
@@ -198,7 +204,7 @@ void subscribe()
             const std::wstring name = p->GetName();
             void* a = ue::param_address(ctx, f, name.c_str());
             UObject* o = a ? *static_cast<UObject**>(a) : nullptr;
-            roam_line_sound(o ? object_path(o) : std::string());
+            (void)o;   // fork : voix plus publiée (histoire partagée)
             break;
         }
     });
@@ -226,9 +232,11 @@ void subscribe()
     });
     bus.post(L"/Game/jRPGTemplate/Blueprints/Basics/BP_jRPG_GI_Custom.BP_jRPG_GI_Custom_C:ChangeMap", [](HookCtx&, UFunction*) {
         if (s.replaying || !s.active || s.ended || !is_pilot() || !sharing()) return;   // pas pendant le chargement de l'instantané
-        if (s.roam && !s.host) return;   // fork : exploration libre, seuls les changements de niveau de l'hôte entraînent l'équipe
         std::string level, tag;
         if (!game::map_destination(level, tag) || is_menu_level(level)) return;   // retour au menu : pas une transition
+        // Fork (PLAN-SHARED-STORY étape 2) : un seul niveau pour tous ; le changement de n'importe qui entraîne l'équipe.
+        // Chacun « pilote » en exploration libre : un changement suivi (MapChange d'un autre) n'est pas republié.
+        if (s.roam && !s.expect_level.empty() && s.expect_level == level) { s.expect_level.clear(); bump("roam_map_changes_followed"); return; }
         s.net.publish(proto::MapChange{++s.seq, level, tag}, true);
         bump("map_changes_published"); touch();
         log().write("coop_map_change", JsonObj().add("level", level).add("spawn", tag));

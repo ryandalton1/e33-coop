@@ -93,6 +93,14 @@ struct S {
     bool active = false;
     bool roam = false;                            // fork E33Lanes : exploration libre (chacun son pion, explore_roam.cpp)
     bool roam_gather = true;                      // fork : cinématique d'un autre joueur -> on le rejoint (-e33roamgather=0)
+    // Fork, histoire partagée (docs/PLAN-SHARED-STORY.md) : meneur de l'événement d'histoire en cours (0xFF : aucun).
+    uint8_t story_leader = 0xFF;
+    uint32_t story_seq = 0;
+    double story_at = -1;                         // début de l'événement
+    double story_quiet_since = -1;                // meneur : plus rien en cours depuis
+    double story_end_sent_at = -1;                // meneur client : fin demandée à l'hôte
+    bool story_requested = false;                 // demande de mener envoyée, pas encore de réponse
+    double story_request_at = -1;
     Net net;
     uint8_t me = 0;
     double now = 0;
@@ -525,6 +533,14 @@ void roam_line_sound(const std::string& sound_path);                         // 
 void roam_line_remote(const proto::DialogueLine& m);                         // réplique d'un autre joueur
 void roam_line_tick();
 bool roam_shared_interaction(UObject* target);   // objet du monde dont l'interaction compte pour l'équipe (coffres, ramassages)
+bool roam_movement_interaction(UObject* target); // prises, cordes, grappins, ennemis : jamais rejoués, pas d'événement
+// Histoire partagée (explore_roam.cpp) : un événement à la fois, mené par celui qui l'a lancé.
+bool story_active();
+void story_begin_local(const char* why);          // interaction / scène lancée ici sans événement en cours
+void story_on_request(uint8_t from);              // hôte : PilotRequest en exploration libre
+void story_on_event(uint8_t from, const proto::StoryEvent& e);
+void story_tick();
+bool story_relay_ok(uint8_t from, const std::string& actor);   // hôte : WorldInteract à relayer ?
 
 } // namespace e33::explore::detail
 

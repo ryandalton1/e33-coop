@@ -90,6 +90,8 @@ Defaults, applied until Ryan answers:
 
 ## F9: Free roam shares the host's story, modelled on Online Expedition (2026-11-16)
 
+> **Superseded** by [PLAN-SHARED-STORY.md](PLAN-SHARED-STORY.md) (2026-11-16): one level for everyone, every story interaction is a party event led by whoever started it (StoryEvent, v10), fights only through the host.
+
 Ryan asked to "mimic the way online expedition does shared story progress" (its Nexus 820 feature list, pasted 2026-11-16), after rejecting per-player stories.
 
 - **Why not separate stories:** with each player's own story, a story boss would be fought once per player, and a cutscene that ends in a fight cuts off friends watching the same scene.

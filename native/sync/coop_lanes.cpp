@@ -515,6 +515,20 @@ bool lane_drop_tx(const proto::Message& m)
     return false;
 }
 
+// Client left the fight here (ResumeExplorationOnBattleEnd without the host's end): reported as a wiped team, so the host
+// stops waiting for our turns (playtest 2026-11-16: the host waited forever after the client's fight ended alone).
+void lane_on_left()
+{
+    auto& b = s.battle;
+    if (!b.lanes || s.role != Role::Client || b.host_end >= 0) return;
+    b.lane_wiped.insert(s.my_player_id);
+    proto::HeroStatus hs{b.id, b.turn, s.my_player_id, hero_briefs()};
+    for (auto& h : hs.heroes) h.alive = false;
+    for (auto& p : s.peers) send_to(p, hs);
+    bump("lane_left_reported");
+    log().write("lane_left_reported", JsonObj().add("battle", b.id), b.turn);
+}
+
 // StartBattleEndFlow, lane mode. Normally a wiped team stays in the fight (lane_full_team_dead). If the game ended our
 // fight in defeat anyway while the host fights on (the "no" did not reach it), fallback: we leave the fight, the choice on
 // the defeat screen is ours, and the host stops waiting for us.

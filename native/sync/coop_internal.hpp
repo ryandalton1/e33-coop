@@ -341,6 +341,11 @@ struct State {
     double early_turn_at = -1;
     double early_start_at = -1;
     double battle_request_at = -1e9;   // client meneur : dernière demande de combat envoyée à l'hôte (D34)
+    // Fork (PLAN-SHARED-STORY étape 1) : combat lancé ici sans BattleStart de l'hôte (dialogue, game action, ennemi).
+    // Jamais joué seul : demandé à l'hôte, terminé si son combat n'arrive pas (Mime du 2026-11-16).
+    double lone_fight_at = -1;         // début de ce combat (-1 : aucun)
+    bool lone_request_due = false;     // demande encore à envoyer (si StartBattle de l'ennemi ne l'a pas fait)
+    double lone_end_at = -1;           // fin forcée demandée
     double world_ready_s = 0;
     double next_trigger_try = 0;
     double action_delay_s = 1.5;                           // délai minimal (depuis le début du tour) avant d'exécuter l'action d'un héros d'un autre joueur
@@ -579,6 +584,7 @@ bool lane_drop_tx(const proto::Message& m);
 void lane_sync_point(UObject** slot);
 proto::SessionMode session_mode();
 void lane_on_battle_end(int result);
+void lane_on_left();   // fork, client : combat quitté ici (fuite, fin locale) : l'hôte ne nous attend plus
 void lane_on_deps(UObject* counter, bool is_reset);
 void lane_full_team_dead(bool& result);
 void lane_check_end(bool pre);
@@ -649,6 +655,7 @@ namespace e33::coop {
 using namespace detail;
 void client_force_end_tick();
 void start_pending_battle();
+void lone_fight_tick();   // fork, client : combat lancé ici sans l'hôte (PLAN-SHARED-STORY étape 1)
 bool replay_free_aim(const std::pair<uint32_t, int>& key, UObject* hero);
 void run_remote_action();
 } // namespace e33::coop
