@@ -536,6 +536,17 @@ void lane_on_battle_end(int result)
 {
     auto& b = s.battle;
     if (!b.lanes) return;
+    // Client won here (our blow, or our counter, killed the last enemy): the game ends the fight without starting another
+    // turn, so lane_sync_point never reported this turn and the host (enemy at 1 HP there: live damage never kills) waited
+    // forever for it (playtest 2026-11-16, 21:39, turn 7). The turn's result is sent now; the host's merge kills the enemy.
+    if (s.role == Role::Client && result == game::EndVictory && b.host_end < 0 && b.turn && b.lane_synced_turn != b.turn) {
+        b.lane_synced_turn = b.turn;
+        proto::LaneResult r{b.id, b.turn, s.my_player_id, proto::lane::deltas(b.lane_base, without_live(enemy_snapshot()))};
+        for (auto& p : s.peers) send_to(p, r);
+        send_hero_status(b.turn);
+        bump("lane_final_results");
+        log().write("lane_final_result", JsonObj().add("deltas", static_cast<int64_t>(r.enemies.size())), b.turn);
+    }
     if (b.lane_pending || b.lane_dep_active) lane_release("battle end");
     // Status lines of the fight (teammate strip, intents, waiting) stayed on screen after it (playtest 2026-11-16).
     for (const char* k : {"lanes", "lane_intent", "lane_wait"}) ui::clear_status(k);

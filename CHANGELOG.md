@@ -47,6 +47,8 @@ E33 Lanes (fork), first test release. Notes in English.
 - Free roam: a fight started from a conversation on a client (the Mime) no longer runs on that client alone. The
   host starts it for the whole party, or it is cancelled; the enemy no longer takes every turn, and the host no
   longer waits forever after a client leaves a fight.
+- Lane combat: when a client lands the killing blow (an attack or a counter), the host no longer waits forever; the
+  kill now counts on the host's side too and the fight ends for everyone.
 - Ctrl+F6 no longer also triggers the "Selected: <character>" ownership hotkey (unused in lane combat).
 
 ## [0.6.35] - 2026-10-25
