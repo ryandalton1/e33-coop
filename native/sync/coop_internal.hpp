@@ -283,6 +283,14 @@ struct Battle {
     bool lane_victory_done = false;
     bool lane_forcing_end = false;                         // dans notre ForceBattleEnd (pas retenu)                            // dans CheckBattleEnd, équipe à terre à garder en spectatrice
     std::set<uint8_t> lane_absent;                         // hôte : joueurs muets (attendus une fois), plus attendus
+    // Dégâts en direct (LaneLive, v10) : affichage seulement, la fusion du tour reste l'autorité
+    std::map<uint8_t, double> lane_live_applied;           // ennemi -> PV retirés ici par les dégâts en direct des autres depuis la base
+    std::map<uint8_t, std::map<uint8_t, double>> lane_live_seen;   // joueur -> ennemi -> cumul déjà appliqué (tour de la base)
+    std::map<uint8_t, proto::LaneLive> lane_live_early;    // joueur -> cumul d'un tour pas encore commencé ici
+    std::map<uint8_t, double> lane_live_sent;              // ennemi -> notre cumul déjà envoyé
+    std::map<uint32_t, bool> lane_turn_hero;               // tour -> un héros joue (dégâts en direct envoyés)
+    uint16_t lane_live_seq = 0;
+    double lane_live_at = 0;
 };
 
 // Tirages de la mise en place d'un combat (D30) : avant le tour 1 (BeginPlay des héros, équipement, effets de début de

@@ -262,6 +262,17 @@ std::string Call::set_first_int(int64_t v)
     return {};
 }
 
+std::string Call::set_first_double(double v)
+{
+    if (!fn_) return {};
+    for (FProperty* p : TFieldRange<FProperty>(fn_, EFieldIterationFlags::IncludeDeprecated)) {
+        if (p->GetSize() != 8) return {};
+        *static_cast<double*>(p->ContainerPtrToValuePtr<void>(buf_.data())) = v;
+        return to_utf8(p->GetName());
+    }
+    return {};
+}
+
 size_t Call::param_size(const wchar_t* name)
 {
     FProperty* p = param(name);

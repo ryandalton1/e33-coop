@@ -225,12 +225,17 @@ void roam_tick()
 {
     roam_line_tick();
     const std::string level = game::current_level();
-    if (level != g_level || game::map_change_in_progress()) {
-        // Local level changed: the puppets were destroyed with it.
+    // Local level changed: the puppets were destroyed with it. No explore pawn (battle, menus) gives an empty level and is
+    // not a change: forgetting the actor there left the old puppet standing where the fight began and spawned a second
+    // one after it (playtest 2026-11-16, "motionless Gustave").
+    const bool map_change = game::map_change_in_progress();
+    if (map_change || (!level.empty() && level != g_level)) {
         for (auto& [id, pp] : g_puppets) { pp.actor = nullptr; pp.hidden = false; }
-        g_level = game::map_change_in_progress() ? std::string() : level;
+        g_level = map_change ? std::string() : level;
     }
-    const bool can_draw = game::explore_pawn() && !game::in_battle() && !game::map_change_in_progress();
+    const bool battle = game::in_battle();
+    if (battle && !map_change) for (auto& [id, pp] : g_puppets) set_hidden(pp, true);   // not in the arena's shot
+    const bool can_draw = game::explore_pawn() && !battle && !map_change;
     for (auto& [id, pp] : g_puppets) {
         if (id == s.me) continue;
         const bool here = pp.last_rx >= 0 && pp.last.level == level && s.now - pp.last_rx < kStaleS;

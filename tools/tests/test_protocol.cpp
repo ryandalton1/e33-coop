@@ -109,7 +109,8 @@ static std::vector<proto::Message> samples()
             proto::WorldLeaves{1, "flags", 7, 1, 2, {{"NID_CuratorTutorial", "1"}}}, proto::WorldLeaves{1, "gold", 0, 0, 1, {}},
             lane_start(bs), lane_result(), proto::LaneResult{7, 2, 0, {}}, enemy_sync(), enemy_sync_end(), hero_status(),
             proto::SessionMode{1, 1, 2.5}, proto::SessionMode{},
-            proto::DialogueLine{1, 4, "Tiffanie", "See you.", "/Game/Audio/WAV/VO/x.x"}, proto::DialogueLine{}};
+            proto::DialogueLine{1, 4, "Tiffanie", "See you.", "/Game/Audio/WAV/VO/x.x"}, proto::DialogueLine{},
+            proto::LaneLive{7, 3, 1, 12, {{0, 120.5}, {2, 0}}}, proto::LaneLive{}};
 }
 
 static void test_roundtrip()

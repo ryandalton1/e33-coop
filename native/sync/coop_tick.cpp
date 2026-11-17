@@ -301,7 +301,9 @@ void tick(double dt)
         const bool press5 = d5 && !f5_down, press6 = d6 && !f6_down;
         DWORD pid = 0;
         if (press5 || press6) GetWindowThreadProcessId(GetForegroundWindow(), &pid);
-        const bool ok = (press5 || press6) && pid == GetCurrentProcessId() && s.role == Role::Host && !s.battle.active;
+        // Fork : en couloirs chaque joueur joue tous ses héros (pas de propriétaire) ; Ctrl+F6 = voyage vers un joueur (roam).
+        const bool ctrl = (GetAsyncKeyState(VK_CONTROL) & 0x8000) != 0;
+        const bool ok = (press5 || press6) && !ctrl && !s.lanes && pid == GetCurrentProcessId() && s.role == Role::Host && !s.battle.active;
         if (const auto party = ok ? game::party_names() : std::vector<std::string>{}; !party.empty()) {
             if (press5 || selected == SIZE_MAX) {   // F6 sans choix préalable : choisit d'abord
                 selected = (selected + 1) % party.size();

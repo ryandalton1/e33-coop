@@ -242,6 +242,10 @@ void encode_payload(const Message& m, wire::Writer& w)
             w.u8(x.lanes); w.u8(x.freeroam); w.f64(x.lane_hp);
         } else if constexpr (std::is_same_v<T, DialogueLine>) {
             w.u8(x.player); w.u32(x.seq); w.str(x.speaker); w.str(x.text); w.str(x.sound);
+        } else if constexpr (std::is_same_v<T, LaneLive>) {
+            w.u32(x.battle_id); w.u32(x.turn); w.u8(x.player); w.u16(x.seq);
+            w.u16(static_cast<uint16_t>(x.damage.size()));
+            for (auto& d : x.damage) { w.u8(d.spot); w.f64(d.hp); }
         } else {
             static_assert(always_false<T>, "message non géré");
         }
@@ -574,6 +578,17 @@ std::optional<Message> decode_payload(MsgType t, wire::Reader& r, std::string& e
         if (x.player > 3) r.fail();
         return finish(x);
     }
+    case MsgType::LaneLive: {
+        LaneLive x; x.battle_id = r.u32(); x.turn = r.u32(); x.player = r.u8(); x.seq = r.u16();
+        if (x.player > kMaxLanePlayers) r.fail();
+        const uint16_t n = r.count(kMaxUnits);
+        for (uint16_t i = 0; i < n && r.ok(); ++i) {
+            LaneDamage d; d.spot = r.u8(); d.hp = r.f64();
+            if (!std::isfinite(d.hp) || d.hp < 0) r.fail();
+            x.damage.push_back(d);
+        }
+        return finish(x);
+    }
     }
     err = "unknown message type " + std::to_string(static_cast<unsigned>(t));
     return std::nullopt;
@@ -638,6 +653,7 @@ const char* type_name(MsgType t)
     case MsgType::HeroStatus: return "HeroStatus";
     case MsgType::SessionMode: return "SessionMode";
     case MsgType::DialogueLine: return "DialogueLine";
+    case MsgType::LaneLive: return "LaneLive";
     }
     return "?";
 }
@@ -655,7 +671,7 @@ MsgType type_of(const Message& m)
                                         MsgType::BuildOffer, MsgType::BuildChunk, MsgType::EconomyDelta,
                                         MsgType::IntentPreview, MsgType::AimView, MsgType::MenuState, MsgType::SceneStart, MsgType::SceneSkip,
                                         MsgType::DefeatChoice, MsgType::EnemyActionDone, MsgType::FlagSet, MsgType::WorldLeavesRequest, MsgType::WorldLeaves,
-                                        MsgType::LaneResult, MsgType::EnemyStateSync, MsgType::HeroStatus, MsgType::SessionMode, MsgType::DialogueLine};
+                                        MsgType::LaneResult, MsgType::EnemyStateSync, MsgType::HeroStatus, MsgType::SessionMode, MsgType::DialogueLine, MsgType::LaneLive};
     static_assert(std::size(order) == std::variant_size_v<Message>);
     return order[m.index()];
 }
@@ -888,6 +904,10 @@ std::string to_json(const Message& m)
             o.add("lanes", static_cast<int>(x.lanes)).add("freeroam", static_cast<int>(x.freeroam)).add("lane_hp", x.lane_hp);
         } else if constexpr (std::is_same_v<T, DialogueLine>) {
             o.add("player", static_cast<int>(x.player)).add("seq", x.seq).add("speaker", x.speaker).add("text", x.text).add("sound", x.sound);
+        } else if constexpr (std::is_same_v<T, LaneLive>) {
+            std::string ds = "[";
+            for (size_t i = 0; i < x.damage.size(); ++i) { if (i) ds += ","; ds += JsonObj().add("s", static_cast<int>(x.damage[i].spot)).add("hp", x.damage[i].hp).str(); }
+            o.add("battle", x.battle_id).add("turn", x.turn).add("player", static_cast<int>(x.player)).add("seq", static_cast<int>(x.seq)).raw("damage", ds + "]");
         }
     }, m);
     return o.str();

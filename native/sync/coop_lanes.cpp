@@ -27,6 +27,20 @@ constexpr double kBannerAfterS = 0.4;
 
 bool lane_live() { return s.role != Role::Solo && s.battle.active && s.battle.lanes && !s.battle.ending; }
 
+// SetHP's parameter is "HP Value" (with a space): set it by position. A wrong name was silently ignored and the game ran
+// SetHP(0), so the health bar drew empty while a raw write kept the real HP (playtest 2026-11-16). Raw write stays as
+// fallback; the bar then only refreshes at the next local hit.
+void write_hp(UObject* st, double hp)
+{
+    ue::Call c(st, STR("SetHP"));
+    if (c && !c.set_first_double(hp).empty()) c.invoke();
+    else bump("lane_sethp_missing");
+    if (std::llround(ue::get_double(st, STR("CurrentHP"))) != std::llround(hp)) {
+        ue::set_double(st, STR("CurrentHP"), hp);
+        bump("lane_sethp_fallbacks");
+    }
+}
+
 std::vector<proto::BuffState> enemy_buffs(UObject* st)
 {
     std::vector<proto::BuffState> out;
@@ -111,9 +125,7 @@ int apply_enemies(const std::vector<proto::EnemyState>& want)
             continue;
         }
         if (std::llround(ue::get_double(st, STR("CurrentHP"))) != std::llround(w.hp)) {
-            ue::Call c(st, STR("SetHP"));                 // updates the health bar (S0); raw write as fallback
-            if (c) c.set_double(STR("NewHP"), w.hp).invoke();
-            if (std::llround(ue::get_double(st, STR("CurrentHP"))) != std::llround(w.hp)) ue::set_double(st, STR("CurrentHP"), w.hp);
+            write_hp(st, w.hp);
             ++changed;
         }
         if (ue::get_int(st, STR("CurrentShieldPoints")) != w.shield) {
@@ -201,16 +213,20 @@ std::string short_hp(double v)
     return std::to_string(static_cast<int64_t>(std::llround(v)));
 }
 
+// Shown name of a hero: the game's internal ID, except Gustave's ("Frey", GAME-INTERNALS 8.4; playtest 2026-11-16).
+std::string hero_name(const std::string& id) { return id == "Frey" ? "Gustave" : id; }
+
 // Teammate strip: one status line with every other player's heroes.
 void strip_refresh()
 {
     auto& b = s.battle;
+    if (!b.active || b.ending) return;          // a late HeroStatus must not redraw it after the fight
     std::string line;
     for (auto& [player, hs] : b.lane_heroes) {
         if (player == s.my_player_id) continue;
         std::string part = player_name(player) + ":";
         if (b.lane_wiped.count(player)) part += " (KO)";
-        for (auto& h : hs.heroes) part += " " + h.cls + " " + (h.alive ? short_hp(h.hp) + "/" + short_hp(h.max_hp) : std::string("KO"));
+        for (auto& h : hs.heroes) part += " " + hero_name(h.cls) + " " + (h.alive ? short_hp(h.hp) + "/" + short_hp(h.max_hp) : std::string("KO"));
         line += (line.empty() ? "" : "  |  ") + part;
     }
     ui::set_status_text("lanes", "lane_strip", line);
@@ -271,6 +287,96 @@ void show_intent(uint8_t player, const proto::IntentPreview& ip)
     bump("lane_intents_shown");
 }
 
+// --- Live damage (LaneLive, v10; Ryan 2026-11-16: "can we make it real time so when others go the damage goes through")
+// Each player streams its own HP damage to each enemy since the turn's base (cumulative). Others take it off their local
+// enemy right away, never below 1 HP: kills stay at the sync point (DECISIONS-FORK F2, an enemy killed mid-turn by an
+// outside write still acted). What was taken off here is added back before our own deltas are measured, so the merge
+// counts every hit once; the merged EnemyStateSync then overwrites everything.
+constexpr double kLiveEveryS = 0.1;
+
+uint32_t live_turn() { return s.battle.lane_pending ? s.battle.lane_pending : s.battle.turn; }
+
+// New common base (turn start, merged state applied): live damage of the previous turn is now inside it.
+void reset_base()
+{
+    auto& b = s.battle;
+    b.lane_base = enemy_snapshot();
+    b.lane_live_applied.clear();
+    b.lane_live_seen.clear();
+    b.lane_live_sent.clear();
+}
+
+// Local enemy state as if teammates' live damage had not been applied here (living enemies only: a local kill is real
+// and needs our own hit, so the total already covers its HP).
+std::vector<proto::EnemyState> without_live(std::vector<proto::EnemyState> v)
+{
+    for (auto& e : v) {
+        auto it = s.battle.lane_live_applied.find(e.spot);
+        if (it == s.battle.lane_live_applied.end() || e.dead || e.hp <= 0) continue;
+        e.hp = e.max_hp > 0 ? std::min(e.max_hp, e.hp + it->second) : e.hp + it->second;
+    }
+    return v;
+}
+
+void live_apply(const proto::LaneLive& m)
+{
+    auto& b = s.battle;
+    auto& seen = b.lane_live_seen[m.player];
+    for (const auto& d : m.damage) {
+        double& was = seen[d.spot];
+        const double inc = d.hp - was;
+        if (inc < 0.5) continue;
+        was = d.hp;
+        UObject* ch = game::find_unit(false, d.spot);
+        UObject* st = game::stats(ch);
+        if (!ch || !st || game::is_dead_fast(ch)) continue;
+        const double cur = ue::get_double(st, STR("CurrentHP"));
+        const double next = std::max(1.0, cur - inc);
+        if (next >= cur) { bump("lane_live_clamped"); continue; }
+        write_hp(st, next);
+        b.lane_live_applied[d.spot] += cur - next;
+        bump("lane_live_hits");
+    }
+}
+
+// Message from a teammate (host: from a client, relayed to the others).
+void live_receive(const proto::LaneLive& m)
+{
+    auto& b = s.battle;
+    if (m.player == s.my_player_id || m.battle_id != b.id) return;
+    const uint32_t t = live_turn();
+    if (m.turn == t) live_apply(m);
+    else if (m.turn > t) b.lane_live_early[m.player] = m;   // their next turn began before our merge landed
+}
+
+// Our own damage so far this turn, sent when it changed (at most every kLiveEveryS). Hero turns only: effects at an enemy's
+// turn start (burn ticks) play on every machine and would be shown twice.
+void live_send()
+{
+    auto& b = s.battle;
+    if (b.lane_spectating || s.now - b.lane_live_at < kLiveEveryS) return;
+    const uint32_t t = live_turn();
+    if (auto it = b.lane_turn_hero.find(t); it == b.lane_turn_hero.end() || !it->second) return;
+    const auto now = without_live(enemy_snapshot());
+    proto::LaneLive m{b.id, t, s.my_player_id, 0, {}};
+    bool changed = false;
+    for (const auto& e0 : b.lane_base) {
+        if (e0.dead) continue;
+        double hp_now = 0;
+        for (const auto& e : now) if (e.spot == e0.spot) hp_now = e.dead ? 0 : e.hp;
+        const double dmg = std::max(0.0, e0.hp - hp_now);
+        m.damage.push_back({e0.spot, dmg});
+        auto it = b.lane_live_sent.find(e0.spot);
+        if (std::fabs(dmg - (it == b.lane_live_sent.end() ? 0.0 : it->second)) >= 0.5) changed = true;
+    }
+    if (!changed) return;
+    b.lane_live_at = s.now;
+    for (const auto& d : m.damage) b.lane_live_sent[d.spot] = d.hp;
+    m.seq = ++b.lane_live_seq;
+    for (auto& p : s.peers) if (in_game(p)) send_to(p, m);   // host: to every client; client: to the host (relays)
+    bump("lane_live_sent");
+}
+
 } // namespace
 
 void lane_host_heroes(const proto::HeroStatus& h);
@@ -312,9 +418,7 @@ void lane_turn_begin()
             const double max = statmap::max_hp(st);
             const double hp = ue::get_double(st, STR("CurrentHP"));
             if (max <= 0 || !statmap::set_max_hp(st, max * b.hp_mult)) { bump("lane_scale_failures"); continue; }
-            ue::Call c(st, STR("SetHP"));
-            if (c) c.set_double(STR("NewHP"), hp * b.hp_mult).invoke();
-            if (std::llround(ue::get_double(st, STR("CurrentHP"))) != std::llround(hp * b.hp_mult)) ue::set_double(st, STR("CurrentHP"), hp * b.hp_mult);
+            write_hp(st, hp * b.hp_mult);
             ++n;
         }
         bump("lane_enemies_scaled", n);
@@ -324,7 +428,8 @@ void lane_turn_begin()
     }
     // Base of the turn: the state every machine agrees on. Normally set when the merged state is applied (the turn starts
     // held); here only when nothing is pending (turn 1, or a turn the game did not hold).
-    if (!b.lane_pending) b.lane_base = enemy_snapshot();
+    if (!b.lane_pending) reset_base();
+    b.lane_turn_hero[b.turn] = game::is_player(game::current_character());
     for (auto it = b.lane_results.begin(); it != b.lane_results.end();) it = it->first + 4 < b.turn ? b.lane_results.erase(it) : std::next(it);
     for (auto it = b.lane_syncs.begin(); it != b.lane_syncs.end();) it = it->first + 4 < b.turn ? b.lane_syncs.erase(it) : std::next(it);
 }
@@ -374,6 +479,14 @@ bool lane_handle(Peer& p, proto::Message& m)
         if (s.role == Role::Host) publish(m, &p);       // teammates see each other's party
         return true;
     }
+    if (auto* lv = std::get_if<proto::LaneLive>(&m)) {
+        if (s.role == Role::Host) {
+            if (lv->player != p.player_id) return true;
+            publish(m, &p);                              // the other clients see it too
+        }
+        if (b.lanes && b.active) live_receive(*lv);
+        return true;
+    }
     if (!b.lanes) return false;
     if (auto* ip = std::get_if<proto::IntentPreview>(&m)) {
         if (ip->battle_id != b.id) return true;
@@ -410,6 +523,8 @@ void lane_on_battle_end(int result)
     auto& b = s.battle;
     if (!b.lanes) return;
     if (b.lane_pending || b.lane_dep_active) lane_release("battle end");
+    // Status lines of the fight (teammate strip, intents, waiting) stayed on screen after it (playtest 2026-11-16).
+    for (const char* k : {"lanes", "lane_intent", "lane_wait"}) ui::clear_status(k);
     if (s.role == Role::Client && result == game::EndDefeat && b.host_end < 0) {
         b.lane_wiped.insert(s.my_player_id);
         send_hero_status(b.turn);
@@ -477,6 +592,7 @@ void lane_release(const char* why)
         log().write("lane_released", JsonObj().add("turn", pending).add("why", why).add("waited_ms", ms).add("held", had_dep), b.turn);
     }
     ui::clear_status("lane_wait");
+    ui::clear_status("lane_intent");           // the teammate's "preparing…" belonged to the turn that just ended
     if (had_dep) {
         b.lane_releasing = true;
         ue::Call solve(lane_deps(), STR("SolveDependency"));
@@ -568,7 +684,7 @@ void host_merge(uint32_t turn, bool timed_out)
     std::vector<proto::LaneResult> results;
     for (auto& [id, r] : b.lane_results[turn]) results.push_back(r);
     proto::lane::MergeStats ms;
-    const auto local_now = enemy_snapshot();
+    const auto local_now = without_live(enemy_snapshot());
     const auto merged = proto::lane::merge(b.lane_base, local_now, results, ms, b.lane_statuses ? &b.lane_marks : nullptr);
     apply_enemies(merged);
     proto::EnemyStateSync y;
@@ -581,7 +697,7 @@ void host_merge(uint32_t turn, bool timed_out)
     broadcast(y);
     if (!b.lane_spectating) send_hero_status(turn);
     damage_feed(b.lane_base, b.lane_local_end, merged);
-    b.lane_base = enemy_snapshot();
+    reset_base();
     b.lane_merged_turn = turn;
     bump("lane_turns");
     bump("lane_merged_results", ms.results);
@@ -611,7 +727,7 @@ void lane_sync_point(UObject** slot)
     const uint32_t turn = b.turn;                       // the turn that just ended
     if (b.lane_synced_turn == turn) return;             // StartCharacterTurn seen twice for one turn
     b.lane_synced_turn = turn;
-    b.lane_local_end = enemy_snapshot();
+    b.lane_local_end = without_live(enemy_snapshot());
     if (s.role == Role::Client) {
         proto::LaneResult r{b.id, turn, s.my_player_id, proto::lane::deltas(b.lane_base, b.lane_local_end)};
         for (auto& p : s.peers) send_to(p, r);
@@ -708,6 +824,14 @@ void lane_tick()
     auto& b = s.battle;
     if (!b.lanes || !b.active || b.ending) return;
     if (b.lane_victory_pending) { lane_release("victory"); lane_victory(); return; }
+    // Live damage: ours out, teammates' early ones (their next turn) applied once our base has caught up.
+    for (auto it = b.lane_live_early.begin(); it != b.lane_live_early.end();) {
+        const uint32_t t = live_turn();
+        if (it->second.turn == t) { live_apply(it->second); it = b.lane_live_early.erase(it); }
+        else if (it->second.turn < t) it = b.lane_live_early.erase(it);
+        else ++it;
+    }
+    live_send();
     // Waiting banner (the game animates meanwhile).
     if (b.lane_pending && s.now - b.lane_pending_since > kBannerAfterS) {
         const std::string w = waiting_names();
@@ -729,7 +853,7 @@ void lane_tick()
                 log().write("lane_desync", JsonObj().raw("local", units_json(enemy_snapshot())).raw("host", units_json(y.enemies)), y.turn);
             }
             damage_feed(b.lane_base, b.lane_local_end, y.enemies);
-            b.lane_base = enemy_snapshot();
+            reset_base();
             UObject* cur = game::current_character();
             if (cur && y.next.spot != proto::kNoSlot) {
                 const proto::Unit mine = actor_unit(cur);

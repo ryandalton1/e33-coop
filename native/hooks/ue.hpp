@@ -73,6 +73,8 @@ public:
     // Premier paramètre de la fonction (nom inconnu, ex. ForceBattleEnd) : entier selon sa taille ; nom renvoyé, vide si aucun.
     std::string set_first_int(int64_t v);
     Call& set_double(const wchar_t* param, double v);
+    // Premier paramètre double (nom inconnu ou avec espace, ex. SetHP(« HP Value »)) ; nom renvoyé, vide si aucun.
+    std::string set_first_double(double v);
     Call& set_fname(const wchar_t* param, const wchar_t* v);
     Call& set_string(const wchar_t* param, const wchar_t* v);   // FString
     Call& set_object_array(const wchar_t* param, const std::vector<UObject*>& v);

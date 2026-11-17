@@ -31,6 +31,16 @@ E33 Lanes (fork), first test release. Notes in English.
     and beaten enemies follow the host;
   - a fight never cuts your own cutscene or conversation: it waits for it to end;
   - Ctrl+F6: travel to the next player.
+- Lane combat: teammates' damage lands on your enemies as they hit, not only at the end of the turn. Enemies only
+  die at the end of the turn (live damage stops at 1 HP).
+
+### Corrections
+- Lane combat: enemy health bars no longer show empty after each turn (they emptied while the enemy still had its HP).
+- Free roam: a fight no longer leaves a frozen copy of your friend standing where it started.
+- Lane combat: the teammate line ("X is preparing an attack…") and the teammate strip no longer stay on screen after
+  the turn or the fight.
+- Lane combat: Gustave is shown as Gustave in the teammate strip, not by his internal name "Frey".
+- Ctrl+F6 no longer also triggers the "Selected: <character>" ownership hotkey (unused in lane combat).
 
 ## [0.6.35] - 2026-10-25
 
