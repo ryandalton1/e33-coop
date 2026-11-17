@@ -412,6 +412,7 @@ void lane_turn_begin()
     if (b.turn == 1 && !b.lane_scaled) {
         b.lane_scaled = true;
         int n = 0;
+        std::string break_max;
         for (UObject* e : game::enemies()) {
             UObject* st = game::stats(e);
             if (!st || game::is_dead_fast(e)) continue;
@@ -419,10 +420,17 @@ void lane_turn_begin()
             const double hp = ue::get_double(st, STR("CurrentHP"));
             if (max <= 0 || !statmap::set_max_hp(st, max * b.hp_mult)) { bump("lane_scale_failures"); continue; }
             write_hp(st, hp * b.hp_mult);
+            // Break gauge too: every team fills the same bar (merge sums it), so unscaled it broke twice as fast and
+            // the enemy lost turns stunned (playtest 2026-11-16: "too easy", 282 break in one turn on a Lancelier).
+            const int64_t brk = ue::get_int(st, STR("StunBreakBarMax"));
+            if (brk > 0 && ue::set_int(st, STR("StunBreakBarMax"), static_cast<int64_t>(std::llround(static_cast<double>(brk) * b.hp_mult)))) {
+                if (!break_max.empty()) break_max += ",";
+                break_max += std::to_string(brk) + ">" + std::to_string(ue::get_int(st, STR("StunBreakBarMax")));
+            } else bump("lane_break_scale_failures");
             ++n;
         }
         bump("lane_enemies_scaled", n);
-        log().write("lane_scaled", JsonObj().add("mult", b.hp_mult).raw("enemies_after", units_json(enemy_snapshot())), b.turn);
+        log().write("lane_scaled", JsonObj().add("mult", b.hp_mult).add("break_max", break_max).raw("enemies_after", units_json(enemy_snapshot())), b.turn);
         send_hero_status(0);
         strip_refresh();
     }

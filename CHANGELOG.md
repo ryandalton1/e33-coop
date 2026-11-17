@@ -49,6 +49,8 @@ E33 Lanes (fork), first test release. Notes in English.
   longer waits forever after a client leaves a fight.
 - Lane combat: when a client lands the killing blow (an attack or a counter), the host no longer waits forever; the
   kill now counts on the host's side too and the fight ends for everyone.
+- Lane combat: enemies' break gauge now scales with the number of players like their HP. Every team fills the same
+  gauge, so enemies were broken (and lost turns) twice as fast.
 - Ctrl+F6 no longer also triggers the "Selected: <character>" ownership hotkey (unused in lane combat).
 
 ## [0.6.35] - 2026-10-25
