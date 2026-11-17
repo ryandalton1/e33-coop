@@ -73,7 +73,9 @@ elseif (-not (Test-Path $settingsPath)) {
                "# turndep : 1 | 0                attente du tour de l'hote sans figer le jeu`r`n" +
                "# duo_parry : 1 | 0              (hote) bonus parade en duo`r`n" +
                "# turn_timer_s : 0 | 30 | 60 | 90  (hote) minuteur de tour, 0 = aucun`r`n" +
-               "lang = auto`r`nupdates = auto`r`naim_cam = 1`r`nturndep = 1`r`nduo_parry = 1`r`nturn_timer_s = 0`r`n"
+               "# lanes : 1 | 0                  (hote) combat en couloirs : chacun son equipe contre le meme ennemi`r`n" +
+               "# freeroam : 1 | 0               (hote) exploration libre, histoire de l'hote partagee`r`n" +
+               "lang = auto`r`nupdates = auto`r`naim_cam = 1`r`nturndep = 1`r`nduo_parry = 1`r`nturn_timer_s = 0`r`nlanes = 1`r`nfreeroam = 1`r`n"
     [IO.File]::WriteAllText($settingsPath, $default, (New-Object System.Text.UTF8Encoding $false))
 }
 

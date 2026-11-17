@@ -179,6 +179,8 @@ constexpr Entry kTexts[] = {
     {"opt_turndep", "Attente sans figer", "Wait without freezing"},
     {"opt_duo_parry", "Parade en duo (hôte)", "Duo parry (host)"},
     {"opt_turn_timer", "Minuteur de tour (hôte)", "Turn timer (host)"},
+    {"opt_lanes", "Combat en couloirs (hôte, au prochain lancement)", "Lane combat (host, next launch)"},
+    {"opt_freeroam", "Exploration libre (hôte, au prochain lancement)", "Free roam (host, next launch)"},
     {"opt_auto", "auto (Windows)", "auto (Windows)"},
     {"opt_updates_auto", "auto (à la fermeture du jeu)", "auto (when the game closes)"},
     {"opt_updates_ask", "demander", "ask"},

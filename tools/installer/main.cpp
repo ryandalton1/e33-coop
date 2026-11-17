@@ -630,6 +630,8 @@ std::wstring option_label(const char* key)
     if (k == "aim_cam") return T(L"Visée de l'autre joueur vue depuis son épaule", L"Other player's aim seen from their shoulder");
     if (k == "turndep") return T(L"Attente du tour de l'hôte sans figer le jeu", L"Wait for the host's turn without freezing");
     if (k == "duo_parry") return T(L"Parade en duo (si vous êtes l'hôte)", L"Duo parry (when you host)");
+    if (k == "lanes") return T(L"Combat en couloirs (si vous êtes l'hôte)", L"Lane combat (when you host)");
+    if (k == "freeroam") return T(L"Exploration libre (si vous êtes l'hôte)", L"Free roam (when you host)");
     return T(L"Minuteur de tour (si vous êtes l'hôte)", L"Turn timer (when you host)");
 }
 std::wstring option_value(const char* key, const std::string& v)

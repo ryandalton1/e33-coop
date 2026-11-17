@@ -188,6 +188,8 @@ constexpr SettingDef kSettings[] = {
     {"turndep", "e33turndep", "1", "1|0"},
     {"duo_parry", "e33duoparry", "1", "1|0"},
     {"turn_timer_s", "e33turntimer", "0", "0|30|60|90"},
+    {"lanes", "e33lanes", "1", "1|0"},          // fork E33Lanes : combat en couloirs (hôte), activé par défaut
+    {"freeroam", "e33freeroam", "1", "1|0"},    // fork E33Lanes : exploration libre, histoire de l'hôte (hôte)
 };
 
 inline std::string trim(std::string_view s)
@@ -264,7 +266,9 @@ inline std::string default_settings_text()
            "# turndep : 1 | 0                attente du tour de l'hote sans figer le jeu\r\n"
            "# duo_parry : 1 | 0              (hote) bonus parade en duo\r\n"
            "# turn_timer_s : 0 | 30 | 60 | 90  (hote) minuteur de tour, 0 = aucun\r\n"
-           "lang = auto\r\nupdates = auto\r\naim_cam = 1\r\nturndep = 1\r\nduo_parry = 1\r\nturn_timer_s = 0\r\n";
+           "# lanes : 1 | 0                  (hote) combat en couloirs : chacun son equipe contre le meme ennemi\r\n"
+           "# freeroam : 1 | 0               (hote) exploration libre, histoire de l'hote partagee\r\n"
+           "lang = auto\r\nupdates = auto\r\naim_cam = 1\r\nturndep = 1\r\nduo_parry = 1\r\nturn_timer_s = 0\r\nlanes = 1\r\nfreeroam = 1\r\n";
 }
 
 // Remplace (ou ajoute) "key = value" en gardant commentaires et autres lignes.

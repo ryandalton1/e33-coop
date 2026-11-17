@@ -37,6 +37,8 @@ constexpr Opt kOpts[] = {
     {"turndep", "opt_turndep", false},
     {"duo_parry", "opt_duo_parry", true},
     {"turn_timer_s", "opt_turn_timer", true},
+    {"lanes", "opt_lanes", true},
+    {"freeroam", "opt_freeroam", true},
 };
 
 std::string ue_free_narrow(const std::wstring& w)
