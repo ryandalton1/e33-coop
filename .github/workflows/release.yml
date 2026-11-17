@@ -51,23 +51,14 @@ jobs:
     permissions: { contents: write }
     env:
       VERSION: ${{ needs.check.outputs.version }}
-      # UE4SS épinglé (D… : même commit que native/third_party/RE-UE4SS) : fichier de la release experimental-latest
-      # d'UE4SS, empreinte vérifiée (si l'asset est remplacé un jour, la release échoue au lieu de livrer autre chose).
-      UE4SS_URL: https://github.com/UE4SS-RE/RE-UE4SS/releases/download/experimental-latest/UE4SS_v3.0.1-1181-g83330635.zip
-      UE4SS_SHA256: b9a166a756605b21058a64cde93bcaab1a855dba3553e5c7e6ce0fa8fdfad7b9
     steps:
       - uses: actions/checkout@v4
       - uses: actions/download-artifact@v4
         with: { name: e33lanes-mod, path: art/mod }
       - uses: actions/download-artifact@v4
         with: { name: e33lanes-tools, path: art/tools }
-      - name: UE4SS (pinned)
-        run: |
-          New-Item -ItemType Directory -Force dl | Out-Null
-          Invoke-WebRequest $env:UE4SS_URL -OutFile dl/ue4ss.zip
-          $h = (Get-FileHash dl/ue4ss.zip -Algorithm SHA256).Hash.ToLower()
-          if ($h -ne $env:UE4SS_SHA256) { throw "UE4SS : empreinte $h, attendue $env:UE4SS_SHA256" }
-          Expand-Archive dl/ue4ss.zip -DestinationPath dl/ue4ss-std
+      # Fork : UE4SS.dll et dwmapi.dll viennent de notre build (source épinglée) ; la config et les mods Lua standard de
+      # la release 1181 sont dans tools/package/ue4ss-std (l'asset experimental-latest a été remplacé par la v4, 2026-11-16).
       - name: Player package
         run: |
           $exe = Get-ChildItem art/tools -Recurse -Filter "Installer E33 Lanes.exe" | Select-Object -First 1
@@ -75,7 +66,7 @@ jobs:
           $info = Get-Content art/mod/build-info.txt -Raw
           if ($info -notmatch "version=$([regex]::Escape($env:VERSION))") { throw "build-info.txt ne porte pas la version $env:VERSION" }
           New-Item -ItemType Directory -Force dist | Out-Null
-          ./tools/package/make-player-package.ps1 -Package art/mod -Ue4ssDir dl/ue4ss-std -Installer $exe.FullName -Out dist/e33lanes-player.zip
+          ./tools/package/make-player-package.ps1 -Package art/mod -Ue4ssDir tools/package/ue4ss-std -Installer $exe.FullName -Out dist/e33lanes-player.zip
           # Nom de l'asset sans espace (GitHub remplace les espaces par des points) ; libellé « Installer E33 Lanes.exe ».
           Copy-Item $exe.FullName "dist/Installer.E33.Coop.exe"
           Push-Location dist
