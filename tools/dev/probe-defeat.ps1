@@ -25,7 +25,18 @@ Start-Sleep 20
 for ($i = 0; $i -lt 200; $i++) { if ((Code 'local p = FindFirstOf("BP_jRPG_Character_World_C"); return tostring(p ~= nil and p:IsValid())' 10) -match "true") { break }; Start-Sleep 3 }
 Start-Sleep 12
 Remote (Join-Path $snip "probe_defeat.lua") | Set-Content (Join-Path $explore "probe-hooks.txt")
-if ($Talk) { Write-Output "READY: talk to NPCs now, then close the game"; exit 0 }
+if ($Talk) {
+    Write-Output "READY: talk to NPCs now, then close the game"
+    # Dialogue line hooks: the overlay widget exists once the HUD is up; retried every 15 s for 15 min.
+    for ($i = 0; $i -lt 60; $i++) {
+        $r = Remote (Join-Path $snip "probe_lines.lua") 20
+        Add-Content (Join-Path $explore "probe-lines-hooks.txt") $r
+        if ($r -match "DialogueOverlay" -and $r -notmatch "not loaded") { break }
+        if (-not (Get-Process "SandFall-Win64-Shipping" -ErrorAction SilentlyContinue)) { break }
+        Start-Sleep 15
+    }
+    exit 0
+}
 Remote (Join-Path $snip "world_info.lua") | Set-Content (Join-Path $explore "probe-world-before.txt")
 Remote (Join-Path $snip "world_battle.lua") | Set-Content (Join-Path $explore "probe-battle.txt")
 Remote (Join-Path $snip "enemy_state.lua") | Set-Content (Join-Path $explore "probe-enemy-before.txt")
