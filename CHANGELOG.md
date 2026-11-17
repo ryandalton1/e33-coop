@@ -14,6 +14,24 @@ pour lui), pas pour un développeur. Les changements internes (tests, outillage)
 
 ## [Non publié]
 
+E33 Lanes (fork), first test release. Notes in English.
+
+### Ajouts
+- Lane combat (on by default, host setting `lanes`): each player brings their own party against the same enemies,
+  whose HP scale with the number of players. Everyone plays their turns at the same time; a turn waits for the others
+  without freezing the game, for as long as needed.
+- A team that wipes stays in the fight and watches until the other teams win or everyone is down.
+- Free roam (on by default, host setting `freeroam`): everyone moves on their own and sees the others walking as their
+  own character. The host's story is the party's, as in Online Expedition:
+  - any player running into an enemy pulls everyone into the fight, and everyone goes back to where they were after;
+  - a beaten roaming enemy disappears for everyone;
+  - cutscenes play for everyone (the party is gathered first); skipping only skips your own screen;
+  - every conversation line (text and voice) is shown and heard by the whole party;
+  - the host's area changes take everyone along; chests and pickups count for everyone; gold, items, progress flags
+    and beaten enemies follow the host;
+  - a fight never cuts your own cutscene or conversation: it waits for it to end;
+  - Ctrl+F6: travel to the next player.
+
 ## [0.6.35] - 2026-10-25
 
 ### Corrections
