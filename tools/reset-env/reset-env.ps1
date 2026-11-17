@@ -13,7 +13,7 @@ param(
 $ErrorActionPreference = "Stop"
 $repo = (Resolve-Path "$PSScriptRoot\..\..").Path
 $savesRoot = Join-Path $env:LOCALAPPDATA "Sandfall\Saved\SaveGames"
-$backupRoot = Join-Path $env:USERPROFILE "e33lanes-backups"
+$backupRoot = Join-Path (Resolve-Path "$PSScriptRoot\..\..").Path "backups"   # repo root, git-ignored
 New-Item -ItemType Directory -Force $backupRoot | Out-Null
 $testSavesSrc = Join-Path $repo ".tools\testsaves"
 $testSavesDst = Join-Path $savesRoot "e33lanes-test"

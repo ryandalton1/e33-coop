@@ -16,3 +16,4 @@ runs/
 
 # Les assets/dumps du jeu ne doivent jamais être commités
 native/third_party/ue4ss-dumps/
+backups/
