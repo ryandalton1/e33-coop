@@ -174,6 +174,7 @@ void set_hidden(Puppet& pp, bool hide)
 const bool g_hide_followers = cmdline::arg(L"e33hidefollowers") != L"0";
 std::set<UObject*> g_followers_hidden;     // actors of the current level we hid
 double g_followers_next = 0;
+std::string g_followers_scan_level;   // level whose nearby characters were logged (diagnostic)
 
 void follower_visible(UObject* a, bool show)
 {
@@ -204,23 +205,53 @@ void followers_tick(bool can_draw)
     g_followers_next = s.now + 1.0;
     std::set<UObject*> puppets;
     for (auto& [id, pp] : g_puppets) if (pp.actor) puppets.insert(pp.actor);
+    // Playtest 2026-11-16 (0.7.1): the party followers are not BP_jRPG_Character_World_C (nothing found). Every
+    // ACharacter is looked at (FindAllOf includes subclasses: it finds every world enemy by their base class). A
+    // follower: near us, not an NPC, an enemy or a world character (pawn, puppets, Esquie), and either a party member
+    // (battle stats with a hardcoded name) or a class named like a follower.
+    double me[3]{};
+    game::location(pawn, me);
     std::vector<UObject*> all;
-    RC::Unreal::UObjectGlobals::FindAllOf(STR("BP_jRPG_Character_World_C"), all);
+    RC::Unreal::UObjectGlobals::FindAllOf(STR("Character"), all);
+    const std::string level = game::current_level();
+    const bool scan_log = g_followers_scan_level != level;   // diagnostic once per level: every character near us
+    std::string near_list;
     int hidden = 0;
     std::string names;
     for (UObject* a : all) {
         if (!a || a == pawn || puppets.count(a) || g_followers_hidden.count(a)) continue;
         const std::string full = ue::full_name(a);
         if (full.find("Default__") != std::string::npos || full.find(":PersistentLevel.") == std::string::npos) continue;
+        double at[3]{};
+        if (!game::location(a, at)) continue;
+        const double dist = std::hypot(at[0] - me[0], at[1] - me[1], at[2] - me[2]);
+        if (dist > 3000.0) continue;
+        const std::string cls = ue::short_name(a->GetClassPrivate());
+        const std::string chr = game::hardcoded_name(a);
+        if (scan_log && near_list.size() < 3000) {
+            std::string chain;
+            int depth = 0;
+            for (RC::Unreal::UStruct* c = a->GetClassPrivate(); c && depth < 5; c = c->GetSuperStruct(), ++depth)
+                chain += (chain.empty() ? "" : ">") + ue::to_utf8(c->GetName());
+            near_list += (near_list.empty() ? "" : " | ") + chain + " d=" + std::to_string(static_cast<int>(dist)) + (chr.empty() ? "" : " chr=" + chr);
+        }
+        if (ue::is_a(a, STR("BP_jRPG_NPC_Base_C")) || ue::is_a(a, STR("BP_jRPG_Enemy_World_Base_Seamless_C")) ||
+            ue::is_a(a, STR("BP_jRPG_Character_World_C")))
+            continue;
+        const bool follower_cls = cls.find("Follow") != std::string::npos || cls.find("Companion") != std::string::npos;
+        if (dist > 2500.0 || (chr.empty() && !follower_cls)) continue;
         follower_visible(a, false);
         g_followers_hidden.insert(a);
         ++hidden;
-        const std::string chr = game::hardcoded_name(a);
-        names += (names.empty() ? "" : ", ") + (chr.empty() ? full.substr(full.rfind('.') + 1) : chr);
+        names += (names.empty() ? "" : ", ") + (chr.empty() ? cls : chr + " (" + cls + ")");
+    }
+    if (scan_log) {
+        g_followers_scan_level = level;
+        log().write("roam_characters_near", JsonObj().add("level", level).add("n", static_cast<int>(all.size())).add("near", near_list));
     }
     if (hidden) {
         bump("roam_followers_hidden", hidden);
-        log().write("roam_followers_hidden", JsonObj().add("n", hidden).add("chars", names).add("level", game::current_level()));
+        log().write("roam_followers_hidden", JsonObj().add("n", hidden).add("chars", names).add("level", level));
     }
 }
 
