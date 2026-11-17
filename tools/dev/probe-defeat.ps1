@@ -1,7 +1,8 @@
 # Fork probe (2026-11-16): game without the coop mod + Lua dev mod; loads TEST_B, hooks flags/enemy/dialogue functions,
 # fights the nearest world enemy, forces victory, records the enemy before/after. Result: runs\explore\probe-*.txt and
 # runs\explore\explore.jsonl (probe_* events). Then talk to NPCs if asked; close the game when done.
-param([string]$GameDir = "C:\Program Files (x86)\Steam\steamapps\common\Expedition 33")
+# -Talk: no fight; hooks set, then the game is yours (talk to a story NPC and a side NPC), close it when done.
+param([string]$GameDir = "C:\Program Files (x86)\Steam\steamapps\common\Expedition 33", [switch]$Talk, [switch]$OwnSave)
 $ErrorActionPreference = "Stop"
 $repo = (Resolve-Path "$PSScriptRoot\..\..").Path
 $explore = Join-Path $repo "runs\explore"
@@ -19,11 +20,12 @@ Write-Output "game starting"
 Start-Sleep 40
 for ($i = 0; $i -lt 60; $i++) { if ((Code 'local m = FindFirstOf("WBP_MM_MainMenu_C"); return tostring(m ~= nil and m:IsValid())' 10) -match "true") { break }; Start-Sleep 3 }
 Start-Sleep 4
-Remote (Join-Path $snip "load_test_b.lua")
+if ($OwnSave) { Write-Output "LOAD YOUR SAVE NOW (Continue)"; } else { Remote (Join-Path $snip "load_test_b.lua") }
 Start-Sleep 20
-for ($i = 0; $i -lt 60; $i++) { if ((Code 'local p = FindFirstOf("BP_jRPG_Character_World_C"); return tostring(p ~= nil and p:IsValid())' 10) -match "true") { break }; Start-Sleep 3 }
+for ($i = 0; $i -lt 200; $i++) { if ((Code 'local p = FindFirstOf("BP_jRPG_Character_World_C"); return tostring(p ~= nil and p:IsValid())' 10) -match "true") { break }; Start-Sleep 3 }
 Start-Sleep 12
 Remote (Join-Path $snip "probe_defeat.lua") | Set-Content (Join-Path $explore "probe-hooks.txt")
+if ($Talk) { Write-Output "READY: talk to NPCs now, then close the game"; exit 0 }
 Remote (Join-Path $snip "world_info.lua") | Set-Content (Join-Path $explore "probe-world-before.txt")
 Remote (Join-Path $snip "world_battle.lua") | Set-Content (Join-Path $explore "probe-battle.txt")
 Remote (Join-Path $snip "enemy_state.lua") | Set-Content (Join-Path $explore "probe-enemy-before.txt")

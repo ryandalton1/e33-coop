@@ -45,6 +45,39 @@ hook("/Game/Gameplay/DialogueSystem/BP_DialogueSystemComponent.BP_DialogueSystem
   pcall(function() n = d:get():GetFullName() end)
   pcall(function() owner = ctx:get():GetOwner():GetFullName() end)
   E33Log("probe_dialogue", n .. " | owner " .. owner)
+  -- every simple field of the dialogue asset and of the owner's dialogue component (looking for a story marker)
+  for _, pair in ipairs({ { "asset", function() return d:get() end }, { "comp", function() return ctx:get() end } }) do
+    pcall(function()
+      local o = pair[2]()
+      local c = o:GetClass()
+      local out = {}
+      while c and c:IsValid() do
+        local cname = c:GetFName():ToString()
+        if cname == "Object" or cname == "ActorComponent" or cname == "DataAsset" or cname == "PrimaryDataAsset" then break end
+        c:ForEachProperty(function(p)
+          local pn = p:GetFName():ToString()
+          local v = "?"
+          pcall(function()
+            local x = o[pn]
+            local t = type(x)
+            if t == "boolean" or t == "number" or t == "string" then v = tostring(x)
+            elseif t == "userdata" then
+              local s = nil
+              pcall(function() s = x:ToString() end)
+              if not s then pcall(function() s = x:GetFullName() end) end
+              v = s or "<obj>"
+            end
+          end)
+          out[#out+1] = pn .. "=" .. v:sub(1, 120)
+        end)
+        c = c:GetSuperStruct()
+      end
+      E33Log("probe_dialogue_" .. pair[1], table.concat(out, " ; "))
+    end)
+  end
+end)
+hook("/Game/Gameplay/DialogueSystem/BP_DialogueSystemComponent.BP_DialogueSystemComponent_C:EndDialogue", function(ctx)
+  E33Log("probe_dialogue_end", name_of(ctx:get()))
 end)
 hook("/Game/Gameplay/Save/BP_SaveManager.BP_SaveManager_C:SaveGame", function(ctx) E33Log("probe_save", "SaveGame") end)
 return table.concat(res, "\n")
