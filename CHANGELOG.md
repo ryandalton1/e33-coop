@@ -31,6 +31,9 @@ E33 Lanes (fork), first test release. Notes in English.
     and beaten enemies follow the host;
   - a fight never cuts your own cutscene or conversation: it waits for it to end;
   - Ctrl+F6: travel to the next player.
+- Free roam: the AI party members walking behind you are hidden; it's just you (switching characters still works).
+  They come back during cutscenes and conversations. This also removes the extra party member a friend's character
+  brought along.
 - Lane combat: teammates' damage lands on your enemies as they hit, not only at the end of the turn. Enemies only
   die at the end of the turn (live damage stops at 1 HP).
 

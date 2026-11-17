@@ -20,6 +20,9 @@
 #include <algorithm>
 #include <cmath>
 #include <deque>
+#include <set>
+
+#include <Unreal/UObjectGlobals.hpp>
 
 namespace e33::explore::detail {
 namespace {
@@ -162,6 +165,65 @@ void set_hidden(Puppet& pp, bool hide)
     pp.hidden = hide;
 }
 
+// --- AI party followers hidden (Ryan, playtest 2026-11-16: "really glitchy about the ai follower units ... just remove
+// them so its just me and i can still switch to the other ones visually"). Every world character that is neither our
+// own pawn nor a puppet is the game's AI party follower (a puppet, being a world character too, even got its own Lune
+// that followed us). Hidden, no collision, no tick (its AI stops). Our pawn is never touched, so switching characters
+// still shows the new one; an actor the game hands us later is restored at once. Cutscenes and conversations: restored
+// in case the game shows them there. -e33hidefollowers=0 keeps them.
+const bool g_hide_followers = cmdline::arg(L"e33hidefollowers") != L"0";
+std::set<UObject*> g_followers_hidden;     // actors of the current level we hid
+double g_followers_next = 0;
+
+void follower_visible(UObject* a, bool show)
+{
+    { ue::Call c(a, STR("SetActorHiddenInGame")); if (c) c.set_bool(STR("bNewHidden"), !show).invoke(); }
+    { ue::Call c(a, STR("SetActorEnableCollision")); if (c) c.set_bool(STR("bNewActorEnableCollision"), show).invoke(); }
+    { ue::Call c(a, STR("SetActorTickEnabled")); if (c) c.set_bool(STR("bEnabled"), show).invoke(); }
+}
+
+void followers_restore(const char* why)
+{
+    if (g_followers_hidden.empty()) return;
+    for (UObject* a : g_followers_hidden) follower_visible(a, true);
+    log().write("roam_followers_restored", JsonObj().add("n", static_cast<int>(g_followers_hidden.size())).add("why", why));
+    g_followers_hidden.clear();
+}
+
+void followers_tick(bool can_draw)
+{
+    if (!g_hide_followers) return;
+    if (game::playing_cinematic() || game::in_dialogue()) { followers_restore("scene"); return; }
+    UObject* pawn = game::explore_pawn();
+    if (!can_draw || !pawn) return;
+    if (g_followers_hidden.erase(pawn)) {                 // the game gave us one of them (character switch)
+        follower_visible(pawn, true);
+        bump("roam_followers_became_pawn");
+    }
+    if (s.now < g_followers_next) return;
+    g_followers_next = s.now + 1.0;
+    std::set<UObject*> puppets;
+    for (auto& [id, pp] : g_puppets) if (pp.actor) puppets.insert(pp.actor);
+    std::vector<UObject*> all;
+    RC::Unreal::UObjectGlobals::FindAllOf(STR("BP_jRPG_Character_World_C"), all);
+    int hidden = 0;
+    std::string names;
+    for (UObject* a : all) {
+        if (!a || a == pawn || puppets.count(a) || g_followers_hidden.count(a)) continue;
+        const std::string full = ue::full_name(a);
+        if (full.find("Default__") != std::string::npos || full.find(":PersistentLevel.") == std::string::npos) continue;
+        follower_visible(a, false);
+        g_followers_hidden.insert(a);
+        ++hidden;
+        const std::string chr = game::hardcoded_name(a);
+        names += (names.empty() ? "" : ", ") + (chr.empty() ? full.substr(full.rfind('.') + 1) : chr);
+    }
+    if (hidden) {
+        bump("roam_followers_hidden", hidden);
+        log().write("roam_followers_hidden", JsonObj().add("n", hidden).add("chars", names).add("level", game::current_level()));
+    }
+}
+
 // Interpolated pose at local time `now` (sender clock mapped to ours, minus the buffer delay).
 bool pose_at(Puppet& pp, double now, Sample& out)
 {
@@ -231,6 +293,7 @@ void roam_tick()
     const bool map_change = game::map_change_in_progress();
     if (map_change || (!level.empty() && level != g_level)) {
         for (auto& [id, pp] : g_puppets) { pp.actor = nullptr; pp.hidden = false; }
+        g_followers_hidden.clear();                       // gone with the level
         g_level = map_change ? std::string() : level;
     }
     const bool battle = game::in_battle();
@@ -274,6 +337,8 @@ void roam_tick()
         }
         drive_puppet(pp, x);
     }
+
+    followers_tick(can_draw);
 
     // Pending travel to another level: once there, next to the player.
     if (g_travel.player != 0xFF) {
@@ -424,6 +489,8 @@ bool roam_shared_interaction(UObject* target)
 
 void roam_reset()
 {
+    if (game::current_level() == g_level && !game::map_change_in_progress()) followers_restore("reset");   // else gone with their level
+    g_followers_hidden.clear();
     for (auto& [id, pp] : g_puppets) destroy_puppet(pp, "reset");
     g_puppets.clear();
     g_travel = Travel{};
