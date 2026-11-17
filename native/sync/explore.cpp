@@ -332,8 +332,17 @@ bool handle(uint8_t from, const proto::Message& m)
     //  - changements de niveau : ceux de l'hôte seulement (seul l'hôte les publie) ; les suiveurs voyagent avec lui ;
     //  - cinématiques (SceneStart) et passages (SceneSkip) : de n'importe qui, rejoués chez tous (rassemblement d'abord) ;
     //  - interactions et choix de dialogue : pas rejoués (chacun les siens ; état repris de l'hôte, phase 2).
-    if (s.roam && (std::holds_alternative<proto::WorldInteract>(m) || std::holds_alternative<proto::DialogueChoice>(m))) {
-        bump("roam_replays_ignored");
+    //  - interactions : de n'importe qui, relayées par l'hôte ; rejouées seulement pour les objets d'état (replay_tick) ;
+    //  - répliques de dialogue (DialogueLine) : de n'importe qui, montrées et entendues chez tous.
+    if (s.roam && std::holds_alternative<proto::DialogueChoice>(m)) { bump("roam_replays_ignored"); return true; }
+    if (auto* dl = std::get_if<proto::DialogueLine>(&m)) {
+        if (s.host) { if (dl->player != from) return true; s.net.relay(m, from, true); }
+        if (s.roam && sharing()) roam_line_remote(*dl);
+        return true;
+    }
+    if (auto* wi = std::get_if<proto::WorldInteract>(&m); wi && s.roam) {
+        if (s.host) s.net.relay(m, from, true);
+        if (sharing()) { s.interactions.push_back(*wi); touch(); }
         return true;
     }
     if (s.roam && s.host && std::holds_alternative<proto::MapChange>(m)) { bump("roam_client_map_changes_ignored"); return true; }
@@ -392,6 +401,13 @@ bool handle(uint8_t from, const proto::Message& m)
     if (auto* sk = std::get_if<proto::SceneSkip>(&m)) {
         if (s.host) { if (sk->player != from || (from != s.pilot && !s.roam)) return true; s.net.relay(m, from, true); }
         log().write("coop_scene_skip_remote", JsonObj().add("player", static_cast<int>(sk->player)).add("scene", sk->scene).add("local_scene", sc.local_scene));
+        // Fork, exploration libre : un passage ne passe que sa propre scène (pas de vote possible : un hook ne peut pas
+        // annuler SkipCinematic) ; les autres sont prévenus, la barrière fait attendre celui qui a passé.
+        if (s.roam && sk->player != s.me) {
+            ui::toast("roam_skipped", {s.net.name_of ? s.net.name_of(sk->player) : std::to_string(sk->player)}, 5.0);
+            bump("roam_skips_seen");
+            return true;
+        }
         if ((sk->player == s.pilot || s.roam) && sk->player != s.me && sharing()) {
             sc.skip_at = s.now; sc.next_skip_try = s.now; sc.skip_tries = 0; sc.skip_seen_playing = false;
             bump("scene_skips_received");
@@ -435,7 +451,7 @@ void tick(double now)
     world_hash_tick();
     if (!s.roam) world_resync_tick();   // fork : en exploration libre, pas de rechargement d'instantané (les joueurs sont ailleurs)
     flags_tick();
-    if (!s.host && !s.roam) world_repair_tick();
+    if (!s.host) world_repair_tick();   // fork : exploration libre aussi (histoire de l'hôte, réparée sur place ; pas d'instantané)
     if (!s.host) perturb_world_tick();
 }
 

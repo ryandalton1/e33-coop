@@ -48,6 +48,8 @@ constexpr Entry kTexts[] = {
     {"roam_travel", "Voyage vers {0}", "Travelling to {0}"},
     {"roam_no_players", "Aucun autre joueur connu", "No other player known"},
     {"roam_gather", "Scène de l'histoire : vous rejoignez {0}", "Story scene: joining {0}"},
+    {"roam_line", "[{0}] {1} : {2}", "[{0}] {1}: {2}"},
+    {"roam_skipped", "{0} a passé la scène (on vous attend)", "{0} skipped the scene (waiting for you)"},
     {"turn_timer", "Tour de {0} : {1} s", "{0}'s turn: {1} s"},
     {"battle_close_menu", "Combat lancé : fermez le menu pour le rejoindre", "Battle started: close the menu to join it"},
     {"battle_finish_scene", "Combat lancé : il vous attend à la fin de la scène", "Battle started: it waits for your scene to end"},

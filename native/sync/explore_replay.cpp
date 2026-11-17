@@ -38,6 +38,10 @@ void replay_tick()
             return;
         }
         UObject* target = ue::find_object(ue::from_utf8(wi.actor).c_str());
+        if (target && s.roam && !roam_shared_interaction(target)) {   // fork : PNJ, ennemis, mouvement : pas rejoués
+            bump("roam_interactions_not_shared");
+            return;
+        }
         if (!target) {
             bump("interactions_missing");
             log().write("coop_interaction_missing", JsonObj().add("actor", wi.actor));

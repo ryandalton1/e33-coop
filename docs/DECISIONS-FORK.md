@@ -104,8 +104,10 @@ Ryan asked to "mimic the way online expedition does shared story progress" (its 
   - Only the host publishes map changes; followers travel with them.
   - SceneStart and SceneSkip are accepted from anyone and replayed everywhere, after the existing gather.
   - Any player's skip skips for all (a vote is phase 2).
-- **Phase 2:**
-  - Followers' world interactions are sent to the host and applied there; followers are repaired in place from the host (upstream D38 repair; no snapshot reload in roam).
-  - Conversation lines (speaker, text) are shown on every screen.
-  - Skip by vote.
+- **Phase 2 (done the same day, Ryan: "just do all phases"):**
+  - Interactions from anyone are relayed by the host. Every machine replays only world-state objects (chests, pickups: `BP_Chest_Regular`, `BP_InteractionObjectBase`), never NPCs, enemies, movement aids, trigger zones or documents.
+  - Followers are repaired in place from the host: gold, inventory, flags, and beaten enemies (new: `SetBattledEnemy` for the host's ids). Parts that can't be repaired (interacted objects, GPE states and others) are only logged in roam. There is no snapshot reload in roam, because it would teleport the player.
+  - Conversation lines: probe 2026-11-16 (`probe_lines.lua`) found `WBP_DialogueOverlay_C:SetDialogueLines(text, speaker)` for every line, then `PlaySoundForCharacter(SoundWave, actor)`. Each line goes out as `DialogueLine` (protocol v9) with its voice asset. Others see "[player] speaker: text" and hear the voice (`PlaySound2D`), unless they are in their own scene or a fight.
+  - Skip: a hook cannot cancel `SkipCinematic`, so there is no true vote. A skip skips only your own screen; the others get "X skipped (waiting for you)", and the narrative barrier makes the skipper wait. Nobody's scene is cut by someone else.
+  - Fights wait for a player's own cutscene or conversation to end. A follower's request reaching a host in a scene is queued until the scene ends.
 - **Kept from the fork, unlike Online Expedition:** lane combat with each player's own party (party profiles), not a borrowed host party.

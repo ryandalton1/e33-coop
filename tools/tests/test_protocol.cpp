@@ -108,7 +108,8 @@ static std::vector<proto::Message> samples()
             proto::WorldLeaves{1, "inventory2", 0xFEDCBA9876543210ull, 0, 2, {{"item:CritChanceOnWeak", "1"}, {"level:Weapon_X", "4"}}},
             proto::WorldLeaves{1, "flags", 7, 1, 2, {{"NID_CuratorTutorial", "1"}}}, proto::WorldLeaves{1, "gold", 0, 0, 1, {}},
             lane_start(bs), lane_result(), proto::LaneResult{7, 2, 0, {}}, enemy_sync(), enemy_sync_end(), hero_status(),
-            proto::SessionMode{1, 1, 2.5}, proto::SessionMode{}};
+            proto::SessionMode{1, 1, 2.5}, proto::SessionMode{},
+            proto::DialogueLine{1, 4, "Tiffanie", "See you.", "/Game/Audio/WAV/VO/x.x"}, proto::DialogueLine{}};
 }
 
 static void test_roundtrip()

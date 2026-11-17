@@ -1,6 +1,9 @@
 // Abonnements aux fonctions du jeu (hooks) de l'exploration.
 #include "explore_internal.hpp"
 
+#include <Unreal/FText.hpp>
+#include <Unreal/Property/FTextProperty.hpp>
+
 namespace e33::explore {
 
 void subscribe()
@@ -173,6 +176,30 @@ void subscribe()
         log().write("coop_scene_skip", JsonObj().add("scene", sc.local_scene));
     });
     bus.post(L"/Game/Gameplay/DialogueSystem/BP_DialogueSystemComponent.BP_DialogueSystemComponent_C:EndDialogue", [](HookCtx&, UFunction*) { s.choice_pending = false; });
+    // Fork, exploration libre (F9, comme Online Expedition) : chaque réplique d'un dialogue d'ici est montrée et entendue
+    // chez tous. Sonde du 2026-11-16 : l'overlay reçoit SetDialogueLines(texte, locuteur) à chaque réplique, puis le
+    // composant joue sa voix (PlaySoundForCharacter(SoundWave, acteur)).
+    bus.pre(L"/Game/UI/Widgets/DialogueSystem/WBP_DialogueOverlay.WBP_DialogueOverlay_C:SetDialogueLines", [](HookCtx& ctx, UFunction* f) {
+        if (!s.roam || !s.active || s.ended || s.replaying || game::in_battle()) return;
+        std::vector<std::string> texts;
+        for (FProperty* p : TFieldRange<FProperty>(f, EFieldIterationFlags::IncludeDeprecated)) {
+            if (!CastField<FTextProperty>(p)) continue;
+            const std::wstring name = p->GetName();
+            if (void* a = ue::param_address(ctx, f, name.c_str())) texts.push_back(ue::to_utf8(static_cast<FText*>(a)->ToString()));
+        }
+        if (!texts.empty()) roam_line_local(texts[0], texts.size() > 1 ? texts[1] : std::string());
+    });
+    bus.pre(L"/Game/Gameplay/DialogueSystem/BP_DialogueSystemComponent.BP_DialogueSystemComponent_C:PlaySoundForCharacter", [](HookCtx& ctx, UFunction* f) {
+        if (!s.roam || !s.active || s.ended || s.replaying) return;
+        for (FProperty* p : TFieldRange<FProperty>(f, EFieldIterationFlags::IncludeDeprecated)) {
+            if (!CastField<FObjectPropertyBase>(p)) continue;
+            const std::wstring name = p->GetName();
+            void* a = ue::param_address(ctx, f, name.c_str());
+            UObject* o = a ? *static_cast<UObject**>(a) : nullptr;
+            roam_line_sound(o ? object_path(o) : std::string());
+            break;
+        }
+    });
     // Nouvelle partie ensemble : l'hôte lance une nouvelle partie -> les clients qui attendent au menu suivent.
     bus.pre(L"/Game/Gameplay/Save/BP_SaveManager.BP_SaveManager_C:StartNewGame", [](HookCtx&, UFunction*) {
         if (!s.active || s.ended) return;

@@ -5,11 +5,13 @@
 //    buffer (upstream D23's idea), hidden when the sender is in another level;
 //  - shared story, modelled on Online Expedition (docs/DECISIONS-FORK.md F9): the host's story is the party's. Flags
 //    from any player apply everywhere; the host's map changes take everyone along; cutscenes (and their skip) from any
-//    player play for everyone; interactions and dialogue choices are not replayed;
+//    player play for everyone (a skip skips only one's own screen); interactions with world-state objects (chests,
+//    pickups) from anyone replay everywhere; every dialogue line (text, speaker, voice) is shown and heard by all;
+//    followers are repaired in place from the host (gold, inventory, flags, beaten enemies);
 //  - battles: any player's engagement asks the host (upstream D34 request, encounter name as fallback when the host is
 //    elsewhere); the host's BattleStart pulls everyone in (lane combat), each returns to their own position after;
 //  - a cinematic first gathers the party (teleport to the player who triggered it), then plays everywhere (upstream
-//    SceneStart replay; the narrative barrier syncs its end); dialogues stay local (lines for everyone: phase 2);
+//    SceneStart replay; the narrative barrier syncs its end); dialogues themselves stay with their player;
 //  - Ctrl+F6: travel to the next player (same level: teleport; other level: change map, then teleport).
 // Puppets are spike S5. v1 (glided, teleported each frame) showed a static Gustave sliding (Ryan, 2026-11-16). v2: AI
 // controller + movement input (the game's locomotion animates it) and the sender's character (LoadAndActivateCharacter).
@@ -221,6 +223,7 @@ void roam_push(const proto::PilotState& p)
 
 void roam_tick()
 {
+    roam_line_tick();
     const std::string level = game::current_level();
     if (level != g_level || game::map_change_in_progress()) {
         // Local level changed: the puppets were destroyed with it.
@@ -335,6 +338,83 @@ void roam_enemy_defeated(const std::string& actor, const std::string& gid)
     bump(marked ? "roam_enemies_marked" : "roam_enemy_mark_failures");
     if (hidden) bump("roam_enemies_hidden");
     log().write("roam_enemy_defeated", JsonObj().add("actor", actor).add("id", gid).add("marked", marked).add("hidden", hidden));
+}
+
+// --- Répliques de dialogue partagées (F9) -------------------------------------------------------------
+// La réplique part avec sa voix (PlaySoundForCharacter suit SetDialogueLines) ; sans voix après 0,3 s, elle part seule.
+namespace {
+proto::DialogueLine g_line;
+double g_line_at = -1;
+uint32_t g_line_seq = 0;
+
+void line_publish()
+{
+    if (g_line_at < 0) return;
+    g_line_at = -1;
+    s.net.publish(g_line, true);
+    bump("roam_lines_published");
+}
+
+std::string short_text(const std::string& t) { return t.size() > 300 ? t.substr(0, 297) + "..." : t; }
+}
+
+void roam_line_local(const std::string& text, const std::string& speaker)
+{
+    line_publish();   // réplique précédente restée sans voix
+    if (text.empty()) return;
+    g_line = proto::DialogueLine{s.me, ++g_line_seq, speaker, short_text(text), {}};
+    g_line_at = s.now;
+}
+
+void roam_line_sound(const std::string& sound_path)
+{
+    if (g_line_at < 0) return;
+    g_line.sound = sound_path;
+    line_publish();
+}
+
+void roam_line_tick()
+{
+    if (g_line_at >= 0 && s.now - g_line_at > 0.3) line_publish();
+}
+
+void roam_line_remote(const proto::DialogueLine& m)
+{
+    if (m.player == s.me) return;
+    // Pendant sa propre scène, rien par-dessus (sous-titres et voix mêlés).
+    if (game::in_dialogue() || game::playing_cinematic() || game::in_battle()) { bump("roam_lines_skipped_busy"); return; }
+    const std::string who = s.net.name_of ? s.net.name_of(m.player) : std::to_string(m.player);
+    const double secs = std::clamp(2.0 + static_cast<double>(m.text.size()) * 0.06, 3.0, 12.0);
+    ui::toast("roam_line", {who, m.speaker.empty() ? "?" : m.speaker, m.text}, secs);
+    bool played = false;
+    if (!m.sound.empty()) {
+        UObject* snd = game::load_asset(ue::from_utf8(m.sound).c_str());
+        UObject* gps = ue::find_object(STR("/Script/Engine.Default__GameplayStatics"));
+        ue::Call c(gps, STR("PlaySound2D"));
+        if (snd && c && game::controller()) {
+            const float one = 1.0f;
+            c.set_object(STR("WorldContextObject"), game::controller()).set_object(STR("Sound"), snd)
+                .set_raw(STR("VolumeMultiplier"), &one).set_raw(STR("PitchMultiplier"), &one);
+            played = c.invoke();
+        }
+    }
+    bump("roam_lines_shown");
+    if (played) bump("roam_lines_voiced");
+    log().write("roam_line_shown", JsonObj().add("player", static_cast<int>(m.player)).add("speaker", m.speaker).add("text", m.text).add("voiced", played));
+}
+
+// Interactions d'un autre joueur rejouées ici (F9 : « ce qu'un suiveur fait dans le monde compte pour l'équipe ») :
+// seulement les objets d'état du monde (coffres, objets ramassables). Pas les PNJ (dialogue chez tous), ennemis
+// (combat), prises d'escalade, cordes, grappins (mouvement), zones de déclenchement (scènes : SceneStart), documents
+// (fenêtre de lecture chez tous).
+bool roam_shared_interaction(UObject* target)
+{
+    if (!target) return false;
+    for (const wchar_t* no : {STR("BP_jRPG_NPC_Base_C"), STR("BP_jRPG_NPC_Dialog_C"), STR("BP_jRPG_Enemy_World_Base_Seamless_C"),
+                              STR("BP_GameActionTriggerZone_C"), STR("BP_DocumentActor_C"), STR("BP_ReadingCube_C"), STR("BP_GrapplePoint_C"),
+                              STR("BP_Holds_C"), STR("BP_GPE_Rope_C"), STR("BP_LightSafeArea_C")})
+        if (ue::is_a(target, no)) return false;
+    return ue::is_a(target, STR("BP_Chest_Regular_C")) || ue::is_a(target, STR("BP_InteractionObjectBase_C"));
 }
 
 void roam_reset()

@@ -32,7 +32,7 @@ namespace e33::proto {
 //      HeroStatus. Le magic du fork diffère de l'amont, donc pas de dialogue croisé quelle que soit la version.
 // v8 (fork E33Lanes) : EnemyDelta.buffs_added/buffs_removed (fusion des statuts, phase 4), SessionMode (couloirs,
 //      exploration libre, réglages de l'hôte annoncés aux clients).
-inline constexpr uint16_t kProtocolVersion = 8;
+inline constexpr uint16_t kProtocolVersion = 9;
 inline constexpr uint32_t kMagic = 0x4C333345; // "E33L" (fork E33Lanes ; amont : 0x43333345 "E33C")
 
 enum class MsgType : uint16_t {
@@ -47,6 +47,7 @@ enum class MsgType : uint16_t {
     EnemyActionDone = 70, FlagSet = 72, WorldLeavesRequest = 73, WorldLeaves = 74,
     LaneResult = 80, EnemyStateSync = 81, HeroStatus = 82,   // fork E33Lanes (v7)
     SessionMode = 84,                                        // fork E33Lanes (v8)
+    DialogueLine = 85,                                       // fork E33Lanes (v9)
 };
 
 const char* type_name(MsgType t);
@@ -426,6 +427,8 @@ struct HeroStatus {                       // player -> all (relayed by the host)
 
 // Host -> client after Welcome (and on change): fork modes. lane_hp 0 = one share per player.
 struct SessionMode { uint8_t lanes = 0; uint8_t freeroam = 0; double lane_hp = 0; };
+// v9, exploration libre (F9, comme Online Expedition) : réplique d'un dialogue d'un joueur, montrée (et entendue) chez tous.
+struct DialogueLine { uint8_t player = 0; uint32_t seq = 0; std::string speaker; std::string text; std::string sound; };
 
 using Message = std::variant<Hello, Welcome, Reject, Bye, Ping, Pong, BattleStart, TurnStart, ActionCommand,
                              DefenseRequest, DefenseResult, StateHash, BattleEnd, Draws, ComboResult, StateSync,
@@ -434,7 +437,7 @@ using Message = std::variant<Hello, Welcome, Reject, Bye, Ping, Pong, BattleStar
                              WorldInteract, DialogueChoice, MapChange, NarrativeState, BarrierRelease, PauseState,
                              Owners, BattleReady, Roster, WorldHash, ResyncRequest, BuildOffer, BuildChunk, EconomyDelta,
                              IntentPreview, AimView, MenuState, SceneStart, SceneSkip, DefeatChoice, EnemyActionDone,
-                             FlagSet, WorldLeavesRequest, WorldLeaves, LaneResult, EnemyStateSync, HeroStatus, SessionMode>;
+                             FlagSet, WorldLeavesRequest, WorldLeaves, LaneResult, EnemyStateSync, HeroStatus, SessionMode, DialogueLine>;
 
 MsgType type_of(const Message& m);
 // Sérialise un message (type u16 + longueur u16 + charge utile).

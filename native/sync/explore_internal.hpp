@@ -520,6 +520,11 @@ void roam_gather(uint8_t player);
 void roam_peer_left(uint8_t player);
 void roam_reset();
 void roam_enemy_defeated(const std::string& actor, const std::string& gid);
+void roam_line_local(const std::string& text, const std::string& speaker);   // réplique d'un dialogue d'ici
+void roam_line_sound(const std::string& sound_path);                         // sa voix (juste après)
+void roam_line_remote(const proto::DialogueLine& m);                         // réplique d'un autre joueur
+void roam_line_tick();
+bool roam_shared_interaction(UObject* target);   // objet du monde dont l'interaction compte pour l'équipe (coffres, ramassages)
 
 } // namespace e33::explore::detail
 

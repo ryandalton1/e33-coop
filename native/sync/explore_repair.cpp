@@ -20,7 +20,16 @@ constexpr double kVerifyDelay = 2.0;        // vérification après l'applicatio
 constexpr double kBlockAfterFail = 300.0;   // après un échec : instantané direct pendant 5 min
 constexpr size_t kPageBytes = 30000;        // charge utile d'une page de WorldLeaves (fragmentée par le lien, D11)
 
-bool repairable(const std::string& part) { return part == "gold" || part == "inventory2" || part == "flags"; }
+bool repairable(const std::string& part) { return part == "gold" || part == "inventory2" || part == "flags" || part == "battled"; }
+
+// Fork : identifiant d'un ennemi vaincu d'après une feuille de GI.BattledEnemies (clé de map « …{ID} », sinon valeur).
+std::string battled_id(const std::string& path, const std::string& value)
+{
+    if (path.find('#') != std::string::npos) return {};   // compte
+    const auto a = path.rfind('{'), b = path.rfind('}');
+    std::string id = (a != std::string::npos && b != std::string::npos && b > a) ? path.substr(a + 1, b - a - 1) : value;
+    return (id.empty() || id == "None" || id == "true" || id == "false" || id == "0" || id == "1") ? std::string() : id;
+}
 
 std::string lower(std::string v)
 {
@@ -225,6 +234,22 @@ void flags_tick()
     }
 }
 
+// Fork : ennemis vaincus chez l'hôte et pas ici -> SetBattledEnemy (le jeu les cache à leur chargement).
+void apply_battled(const std::vector<proto::LeafEntry>& host, ApplyOut& o)
+{
+    std::set<std::string> mine;
+    for (auto& [p, v] : reflect::field(game::gi(), L"BattledEnemies"))
+        if (std::string id = battled_id(p, v); !id.empty()) mine.insert(id);
+    for (auto& l : host) {
+        if (l.key.empty() || mine.count(l.key)) continue;
+        const std::wstring id = ue::from_utf8(l.key);
+        ue::Call c(game::gi(), STR("SetBattledEnemy"));
+        bool ok = false;
+        if (c) { c.set_fname(STR("EnemyID"), id.c_str()); ok = c.invoke(); }
+        o.note("battled:" + l.key, true, ok, c ? std::string() : "SetBattledEnemy not found");
+    }
+}
+
 // --- Réparation sur place : hôte --------------------------------------------------------------------
 
 void send_world_leaves(uint8_t to, const proto::WorldLeavesRequest& rq)
@@ -245,6 +270,9 @@ void send_world_leaves(uint8_t to, const proto::WorldLeavesRequest& rq)
             // Casse d'origine (l'empreinte est en minuscules) : le client la passe telle quelle au jeu.
             for (auto& [k, v] : eco)
                 if (k != "gold" && v != 0 && !skin_or_face(lower(k))) out.push_back({k, std::to_string(v)});
+        } else if (part == "battled") {
+            for (auto& [p, v] : leaves[part])
+                if (std::string id = battled_id(p, v); !id.empty()) out.push_back({id, "1"});
         } else {
             for (auto& [p, v] : leaves[part])
                 if (std::string n = flag_name(p); !n.empty()) out.push_back({n, v});
@@ -275,15 +303,22 @@ bool try_world_repair(const std::string& differ, const std::vector<std::string>&
 {
     if (!world_repair_on() || parts.empty() || s.wr.st != S::Repair::St::None) return false;
     if (s.now < s.wr.blocked_until) { log().write("coop_world_repair_skipped", JsonObj().add("parts", differ).add("why", "failed recently")); return false; }
-    for (const std::string& p : parts)
-        if (!repairable(p)) { log().write("coop_world_repair_skipped", JsonObj().add("parts", differ).add("why", "not repairable: " + p)); return false; }
+    std::vector<std::string> fix;
+    for (const std::string& p : parts) {
+        if (repairable(p)) { fix.push_back(p); continue; }
+        // Fork, exploration libre : pas d'instantané ; on répare ce qui peut l'être, le reste est seulement journalisé.
+        if (s.roam) { bump("roam_parts_not_repairable"); continue; }
+        log().write("coop_world_repair_skipped", JsonObj().add("parts", differ).add("why", "not repairable: " + p));
+        return false;
+    }
+    if (fix.empty()) { log().write("coop_world_repair_skipped", JsonObj().add("parts", differ).add("why", "roam: nothing repairable")); return true; }
     auto& r = s.wr;
     r.st = S::Repair::St::Requested;
     r.req += 1;
-    r.parts = parts;
+    r.parts = fix;
     r.differ = differ;
     r.at = s.now;
-    s.net.publish(proto::WorldLeavesRequest{r.req, parts}, true);
+    s.net.publish(proto::WorldLeavesRequest{r.req, fix}, true);
     bump("world_repairs_requested");
     log().write("coop_world_repair_request", JsonObj().add("req", r.req).add("parts", differ));
     return true;
@@ -327,6 +362,7 @@ void world_repair_tick()
             if (part == "gold") apply_gold(host, o);
             else if (part == "inventory2") apply_inventory(host, o);
             else if (part == "flags") apply_flags(host, o);
+            else if (part == "battled") apply_battled(host, o);
         }
         // Événement : le relevé d'économie (builds.cpp) reprend sa référence au lieu d'envoyer ces écarts à l'hôte.
         touch();
