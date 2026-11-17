@@ -111,7 +111,7 @@ static std::vector<proto::Message> samples()
             proto::SessionMode{1, 1, 2.5}, proto::SessionMode{},
             proto::DialogueLine{1, 4, "Tiffanie", "See you.", "/Game/Audio/WAV/VO/x.x"}, proto::DialogueLine{},
             proto::LaneLive{7, 3, 1, 12, {{0, 120.5}, {2, 0}}}, proto::LaneLive{},
-            proto::StoryEvent{4, 1}, proto::StoryEvent{5, 0xFF}};
+            proto::StoryEvent{4, 1}, proto::StoryEvent{5, 0xFF}, proto::LanePart{3, 1, 2, 0}, proto::LanePart{}};
 }
 
 static void test_roundtrip()

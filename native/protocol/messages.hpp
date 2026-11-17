@@ -33,7 +33,8 @@ namespace e33::proto {
 // v8 (fork E33Lanes) : EnemyDelta.buffs_added/buffs_removed (fusion des statuts, phase 4), SessionMode (couloirs,
 //      exploration libre, réglages de l'hôte annoncés aux clients).
 // v10 (fork E33Lanes) : LaneLive (dégâts d'un joueur en direct pendant le tour, montrés chez les autres avant la fusion) ;
-//      StoryEvent (meneur de l'événement d'histoire partagé, docs/PLAN-SHARED-STORY.md).
+//      StoryEvent (meneur de l'événement d'histoire partagé, docs/PLAN-SHARED-STORY.md) ;
+//      LanePart (point faible cassé chez un joueur, coupé chez tous).
 inline constexpr uint16_t kProtocolVersion = 10;
 inline constexpr uint32_t kMagic = 0x4C333345; // "E33L" (fork E33Lanes ; amont : 0x43333345 "E33C")
 
@@ -52,6 +53,7 @@ enum class MsgType : uint16_t {
     DialogueLine = 85,                                       // fork E33Lanes (v9)
     LaneLive = 86,                                           // fork E33Lanes (v10)
     StoryEvent = 87,                                         // fork E33Lanes (v10)
+    LanePart = 88,                                           // fork E33Lanes (v10)
 };
 
 const char* type_name(MsgType t);
@@ -438,6 +440,9 @@ struct DialogueLine { uint8_t player = 0; uint32_t seq = 0; std::string speaker;
 // v10: host -> all. A shared story event (conversation, cutscene, document) is led by `leader` (0xFF: none, event over).
 // Only the leader's interactions, choices and skips are replayed; everyone else is gathered and watches.
 struct StoryEvent { uint32_t seq = 0; uint8_t leader = 0xFF; };
+// v10: player -> host -> others. A free-aim target part (weak point) of enemy `spot` was broken in `player`'s lane:
+// switched off in every lane, so the team gets one weak-point shot per enemy, as solo (they deal a share of max HP).
+struct LanePart { uint32_t battle_id = 0; uint8_t player = 0; uint8_t spot = 0; uint8_t part = 0; };
 struct LaneDamage { uint8_t spot = 0; double hp = 0; };
 struct LaneLive {                         // player -> host -> others
     uint32_t battle_id = 0;
@@ -454,7 +459,7 @@ using Message = std::variant<Hello, Welcome, Reject, Bye, Ping, Pong, BattleStar
                              WorldInteract, DialogueChoice, MapChange, NarrativeState, BarrierRelease, PauseState,
                              Owners, BattleReady, Roster, WorldHash, ResyncRequest, BuildOffer, BuildChunk, EconomyDelta,
                              IntentPreview, AimView, MenuState, SceneStart, SceneSkip, DefeatChoice, EnemyActionDone,
-                             FlagSet, WorldLeavesRequest, WorldLeaves, LaneResult, EnemyStateSync, HeroStatus, SessionMode, DialogueLine, LaneLive, StoryEvent>;
+                             FlagSet, WorldLeavesRequest, WorldLeaves, LaneResult, EnemyStateSync, HeroStatus, SessionMode, DialogueLine, LaneLive, StoryEvent, LanePart>;
 
 MsgType type_of(const Message& m);
 // Sérialise un message (type u16 + longueur u16 + charge utile).

@@ -51,6 +51,9 @@ E33 Lanes (fork), first test release. Notes in English.
   kill now counts on the host's side too and the fight ends for everyone.
 - Lane combat: enemies' break gauge now scales with the number of players like their HP. Every team fills the same
   gauge, so enemies were broken (and lost turns) twice as fast.
+- Lane combat: weak points are shared. Once any player breaks an enemy's weak point, it's gone for everyone. Before,
+  each player had their own, and since a weak-point shot takes a share of the enemy's max HP (half, for a Portier),
+  two players could kill a Portier with one shot each.
 - Ctrl+F6 no longer also triggers the "Selected: <character>" ownership hotkey (unused in lane combat).
 
 ## [0.6.35] - 2026-10-25

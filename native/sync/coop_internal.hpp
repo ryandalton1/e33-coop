@@ -287,6 +287,10 @@ struct Battle {
     std::map<uint8_t, double> lane_live_applied;           // ennemi -> PV retirés ici par les dégâts en direct des autres depuis la base
     std::map<uint8_t, std::map<uint8_t, double>> lane_live_seen;   // joueur -> ennemi -> cumul déjà appliqué (tour de la base)
     std::map<uint8_t, proto::LaneLive> lane_live_early;    // joueur -> cumul d'un tour pas encore commencé ici
+    // Points faibles partagés (LanePart) : zones touchées ici, à vérifier (cassées -> envoyées) ; zones déjà partagées.
+    struct LanePartCheck { uint8_t spot = 0; uint8_t part = 0; double at = 0; };
+    std::vector<LanePartCheck> lane_part_checks;
+    std::set<std::pair<uint8_t, uint8_t>> lane_parts_shared;   // (ennemi, zone) cassée chez quelqu'un : coupée partout
     std::map<uint8_t, double> lane_live_sent;              // ennemi -> notre cumul déjà envoyé
     std::map<uint32_t, bool> lane_turn_hero;               // tour -> un héros joue (dégâts en direct envoyés)
     uint16_t lane_live_seq = 0;
@@ -584,7 +588,8 @@ bool lane_drop_tx(const proto::Message& m);
 void lane_sync_point(UObject** slot);
 proto::SessionMode session_mode();
 void lane_on_battle_end(int result);
-void lane_on_left();   // fork, client : combat quitté ici (fuite, fin locale) : l'hôte ne nous attend plus
+void lane_on_left();
+void lane_part_hit(UObject* enemy, int part);   // fork : tir à nous sur une zone (point faible) d'un ennemi   // fork, client : combat quitté ici (fuite, fin locale) : l'hôte ne nous attend plus
 void lane_on_deps(UObject* counter, bool is_reset);
 void lane_full_team_dead(bool& result);
 void lane_check_end(bool pre);

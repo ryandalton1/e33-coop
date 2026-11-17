@@ -608,6 +608,7 @@ void subscribe()
                 // Zone touchée connue (point faible…) : point relatif à elle, le rejeu la vise là où elle est chez lui.
                 const int pi = free_aim_part_index(hit, s.fa_own.shot_part);
                 double pl[3];
+                if (pi >= 0) lane_part_hit(hit, pi);   // fork : point faible partagé entre couloirs (LanePart)
                 if (pi >= 0 && free_aim_part_location(s.fa_own.shot_part, pl)) {
                     e.part = static_cast<uint8_t>(pi);
                     a[0] = pl[0]; a[1] = pl[1]; a[2] = pl[2];

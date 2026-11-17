@@ -495,6 +495,14 @@ bool lane_handle(Peer& p, proto::Message& m)
         if (b.lanes && b.active) live_receive(*lv);
         return true;
     }
+    if (auto* lp = std::get_if<proto::LanePart>(&m)) {
+        if (s.role == Role::Host) {
+            if (lp->player != p.player_id) return true;
+            publish(m, &p);
+        }
+        if (b.lanes && b.active && !b.ending) lane_part_receive(*lp);
+        return true;
+    }
     if (!b.lanes) return false;
     if (auto* ip = std::get_if<proto::IntentPreview>(&m)) {
         if (ip->battle_id != b.id) return true;
@@ -521,6 +529,83 @@ bool lane_drop_tx(const proto::Message& m)
     if (!s.battle.lanes || !s.battle.active) return false;
     if (is_replay(m)) { bump("lane_replay_dropped_tx"); return true; }
     return false;
+}
+
+// --- Shared weak points (LanePart) -----------------------------------------------------------------------------------
+// Playtest 2026-11-16: a weak-point shot takes a share of the enemy's max HP (Portier 50%, Lancelier Alpha 30%), so HP
+// scaling does not touch it, and each lane had its own weak point: two players, two shots, Portier dead. A part our shot
+// hit is checked a moment later; broken (every shape without collision, as the game leaves it: D37) -> sent, and every
+// other lane switches the same part off. Two shots within the network delay both count (rare).
+namespace {
+bool part_broken(UObject* part)
+{
+    if (!part || !ue::is_a(part, STR("BP_FreeAimTargetPart_C"))) return false;
+    const auto shapes = ue::get_object_array(part, STR("ValidChildren"));
+    if (shapes.empty()) return false;
+    for (UObject* sh : shapes) {
+        ue::Call c(sh, STR("GetCollisionEnabled"));
+        if (!c || !c.invoke() || c.out_int(STR("ReturnValue"), -1) != 0) return false;
+    }
+    return true;
+}
+
+bool part_switch_off(UObject* part)
+{
+    if (!part || !ue::is_a(part, STR("BP_FreeAimTargetPart_C"))) return false;
+    { ue::Call c(part, STR("DisablePartsCollisions")); if (c) c.invoke(); }
+    for (UObject* sh : ue::get_object_array(part, STR("ValidChildren"))) {
+        ue::Call c(sh, STR("SetCollisionEnabled"));
+        if (c) c.set_int(STR("NewType"), 0).invoke();
+    }
+    return part_broken(part);
+}
+
+void lane_parts_tick()
+{
+    auto& b = s.battle;
+    for (auto it = b.lane_part_checks.begin(); it != b.lane_part_checks.end();) {
+        const double age = s.now - it->at;
+        if (age < 0.3) { ++it; continue; }
+        const auto key = std::make_pair(it->spot, it->part);
+        UObject* enemy = game::find_unit(false, it->spot);
+        const bool broken = enemy && part_broken(free_aim_part_at(enemy, it->part));
+        if (broken && !b.lane_parts_shared.count(key)) {
+            b.lane_parts_shared.insert(key);
+            proto::LanePart m{b.id, s.my_player_id, it->spot, it->part};
+            for (auto& p : s.peers) send_to(p, m);
+            bump("lane_parts_sent");
+            log().write("lane_part_sent", JsonObj().add("spot", static_cast<int>(it->spot)).add("part", static_cast<int>(it->part)).add("after_s", age), b.turn);
+        }
+        if (broken || age > 3.0) it = b.lane_part_checks.erase(it);   // not broken after 3 s: a part that stays (body)
+        else ++it;
+    }
+}
+
+void lane_part_receive(const proto::LanePart& m)
+{
+    auto& b = s.battle;
+    if (m.battle_id != b.id || m.player == s.my_player_id) return;
+    const auto key = std::make_pair(m.spot, m.part);
+    const bool again = b.lane_parts_shared.count(key) > 0;   // broken here too (both shot it)
+    b.lane_parts_shared.insert(key);
+    UObject* enemy = game::find_unit(false, m.spot);
+    UObject* part = enemy ? free_aim_part_at(enemy, m.part) : nullptr;
+    const bool was = part_broken(part);
+    const bool ok = was || part_switch_off(part);
+    bump(again ? "lane_parts_double" : ok ? "lane_parts_applied" : "lane_part_failures");
+    log().write("lane_part_received", JsonObj().add("player", static_cast<int>(m.player)).add("spot", static_cast<int>(m.spot)).add("part", static_cast<int>(m.part))
+                                           .add("found", part != nullptr).add("already", was).add("ok", ok), b.turn);
+}
+} // namespace
+
+void lane_part_hit(UObject* enemy, int part)
+{
+    auto& b = s.battle;
+    if (!lane_live() || !enemy || part < 0 || part > 0xFF || game::is_player(enemy)) return;
+    const int spot = game::spot(enemy);
+    if (spot < 0 || spot > 0xFF) return;
+    if (b.lane_parts_shared.count({static_cast<uint8_t>(spot), static_cast<uint8_t>(part)})) return;
+    b.lane_part_checks.push_back({static_cast<uint8_t>(spot), static_cast<uint8_t>(part), s.now});
 }
 
 // Client left the fight here (ResumeExplorationOnBattleEnd without the host's end): reported as a wiped team, so the host
@@ -865,6 +950,7 @@ void lane_tick()
         else ++it;
     }
     live_send();
+    lane_parts_tick();
     // Waiting banner (the game animates meanwhile).
     if (b.lane_pending && s.now - b.lane_pending_since > kBannerAfterS) {
         const std::string w = waiting_names();
