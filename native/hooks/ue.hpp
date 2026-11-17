@@ -75,6 +75,8 @@ public:
     Call& set_double(const wchar_t* param, double v);
     // Premier paramètre double (nom inconnu ou avec espace, ex. SetHP(« HP Value »)) ; nom renvoyé, vide si aucun.
     std::string set_first_double(double v);
+    // Premier paramètre objet (nom inconnu, ex. EndDialogue(ABP_Dialogue_C*, …)) ; nom renvoyé, vide si aucun.
+    std::string set_first_object(UObject* v);
     Call& set_fname(const wchar_t* param, const wchar_t* v);
     Call& set_string(const wchar_t* param, const wchar_t* v);   // FString
     Call& set_object_array(const wchar_t* param, const std::vector<UObject*>& v);

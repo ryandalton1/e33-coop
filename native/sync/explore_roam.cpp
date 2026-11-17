@@ -511,8 +511,9 @@ bool close_local_dialogue()
     UObject* dlg = ue::get_object(sys, STR("ActiveDialogue"));
     ue::Call c(sys, STR("EndDialogue"));
     if (!c || !dlg) return false;
-    for (const wchar_t* n : {STR("Dialogue"), STR("DialogueActor"), STR("InDialogue"), STR("Dialog")})
-        if (c.param_size(n) == sizeof(void*)) { c.set_object(n, dlg); break; }
+    const std::string param = c.set_first_object(dlg);   // nom du paramètre inconnu : premier paramètre objet
+    log().write("story_close_dialogue", JsonObj().add("param", param));
+    if (param.empty()) return false;
     s.replaying = true;
     const bool ok = c.invoke();
     s.replaying = false;
