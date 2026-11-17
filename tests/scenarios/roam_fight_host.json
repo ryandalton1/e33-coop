@@ -1,0 +1,20 @@
+{
+  "name": "roam_fight_host",
+  "description": "Free roam + lanes (fork E33Lanes): the host fights the nearest world enemy with a fake lane client and wins. At victory every machine marks the world enemy beaten through the game's SetBattledEnemy (players fighting from elsewhere never touched it) and hides it if loaded: roam_enemies_marked, the enemy gone in the last screenshots.",
+  "save": "e33lanes-test/TEST_B",
+  "timeout_s": 900,
+  "wait_players": 1,
+  "max_turns": 80,
+  "action_delay_s": 1.0,
+  "combo_auto_success": 10,
+  "shots_every_s": 5,
+  "actions": [ { "type": "attack", "target": 0 } ],
+  "defense": ["parry"],
+  "explore": [
+    { "do": "world_battle" },
+    { "do": "wait", "s": 15 }
+  ],
+  "launch_args": ["-e33role=host", "-e33port=7777", "-e33freeroam=1", "-e33lanes=1", "-e33lanehp=2"],
+  "fakepeer": { "start": "after_game", "args": ["client", "--connect", "127.0.0.1:7777", "--script", "{repo}/tests/scenarios/fakeclient_lanes.json", "--record", "{run}/recording-fakeclient.jsonl", "--timeout", "900"], "stop_ok": true },
+  "expect": { "hashes_compared": "any", "lane_desyncs": "0", "battle_end": "1", "lane_turns": ">=2", "roam_enemies_marked": ">=1", "roam_enemy_mark_failures": "0" }
+}

@@ -460,6 +460,10 @@ void set_roam(bool on)
     log().write("roam_mode", JsonObj().add("on", on));
 }
 bool roam() { return s.roam; }
+void enemy_defeated(const std::string& world_enemy, const std::string& enemy_global_id)
+{
+    if (s.roam) roam_enemy_defeated(world_enemy, enemy_global_id);
+}
 
 bool shared() { return sharing(); }
 

@@ -519,6 +519,7 @@ void roam_tick();
 void roam_gather(uint8_t player);
 void roam_peer_left(uint8_t player);
 void roam_reset();
+void roam_enemy_defeated(const std::string& actor, const std::string& gid);
 
 } // namespace e33::explore::detail
 

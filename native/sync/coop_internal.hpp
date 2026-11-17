@@ -156,6 +156,7 @@ struct OwnerDone {                                         // fin d'action chez 
 
 struct Battle {
     uint32_t id = 0;
+    std::string world_enemy, enemy_global_id;              // fork : ennemi du monde du combat (retiré partout à la victoire)
     uint32_t turn = 0;
     bool active = false;
     bool ending = false;                                   // fin de combat commencée (tirages des récompenses encore remplacés)

@@ -70,6 +70,8 @@ void start_pending_battle()
     }
     s.pending_start.reset();
     s.battle.active = true;
+    s.battle.world_enemy = bs.world_enemy;
+    s.battle.enemy_global_id = bs.enemy_global_id;
     log().write("coop_battle_start", JsonObj().add("battle", bs.battle_id).add("encounter", bs.encounter).add("already_engaged", already));
     // Combat engagé ici avant le BattleStart (notre pion suit le pilote) : son premier tour a pu commencer sans le mod.
     // Sans rattrapage, le BattleReady ne part jamais et l'hôte reste figé en attente (vu le 2026-10-20, 2e combat).

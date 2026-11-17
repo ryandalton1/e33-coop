@@ -66,6 +66,8 @@ void host_turn_start(UObject* actor)
                 bs.enemy_global_id = gid;
                 bs.engage = static_cast<uint8_t>(engage);
                 bs.world_enemy = explore::take_world_enemy();
+                b.world_enemy = bs.world_enemy;
+                b.enemy_global_id = gid;
                 bs.party = game::party_names();   // équipe réelle : celle du client peut être restée l'ancienne
                 // Héros réellement en combat, par emplacement : un combat contre un marchand se joue avec les seuls héros
                 // choisis (ex. Maelle seule, 2026-10-24) ; avec l'équipe d'exploration, le client avait toute l'équipe et des

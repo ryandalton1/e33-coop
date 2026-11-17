@@ -309,6 +309,33 @@ void roam_peer_left(uint8_t player)
     g_puppets.erase(it);
 }
 
+// A free-roam fight was won (every machine, at its own battle end). Players who were elsewhere fought it by encounter
+// name, so their game never marked the world enemy beaten. Probe 2026-11-16 (tools/dev/probe-defeat.ps1): the game
+// keeps beaten enemies in the GI (SetBattledEnemy(EnemyID) -> BattledEnemies / TransientBattledEnemies, the latter
+// emptied at an Expedition Flag rest) and hides the actor (hidden, no collision, CurrentAiState 9, no tick). We call
+// the same SetBattledEnemy (the game then decides persistence and respawn, as solo) and hide the actor if loaded here.
+void roam_enemy_defeated(const std::string& actor, const std::string& gid)
+{
+    bool marked = false, hidden = false;
+    if (!gid.empty() && gid != "None") {
+        const std::wstring id = ue::from_utf8(gid);
+        ue::Call c(game::gi(), STR("SetBattledEnemy"));
+        if (c) { c.set_fname(STR("EnemyID"), id.c_str()); marked = c.invoke(); }
+    }
+    if (UObject* e = actor.empty() ? nullptr : game::find_world_enemy(actor)) {
+        ue::Call h(e, STR("SetActorHiddenInGame"));
+        if (h) { h.set_bool(STR("bNewHidden"), true); hidden = h.invoke(); }
+        ue::Call col(e, STR("SetActorEnableCollision"));
+        if (col) col.set_bool(STR("bNewActorEnableCollision"), false).invoke();
+        ue::Call tk(e, STR("SetActorTickEnabled"));
+        if (tk) tk.set_bool(STR("bEnabled"), false).invoke();
+        ue::set_int(e, STR("CurrentAiState"), 9);
+    }
+    bump(marked ? "roam_enemies_marked" : "roam_enemy_mark_failures");
+    if (hidden) bump("roam_enemies_hidden");
+    log().write("roam_enemy_defeated", JsonObj().add("actor", actor).add("id", gid).add("marked", marked).add("hidden", hidden));
+}
+
 void roam_reset()
 {
     for (auto& [id, pp] : g_puppets) destroy_puppet(pp, "reset");

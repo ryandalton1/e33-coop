@@ -873,6 +873,7 @@ void subscribe()
         // Sans victoire, pas de récompenses : la fin est traitée tout de suite.
         if (result != game::EndVictory) s.battle.end_flow_at = s.now;
         if (result == game::EndDefeat) defeat_arm();
+        if (result == game::EndVictory) explore::enemy_defeated(s.battle.world_enemy, s.battle.enemy_global_id);
         lane_on_battle_end(result);   // fork : spectateur si notre équipe est à terre ; profil rendu au retour en exploration
     });
 

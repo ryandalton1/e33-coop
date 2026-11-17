@@ -41,6 +41,7 @@ void subscribe();
 // (-e33freeroam=1), annoncé aux clients par SessionMode.
 void set_roam(bool on);
 bool roam();
+void enemy_defeated(const std::string& world_enemy, const std::string& enemy_global_id);   // fork : victoire en exploration libre
 
 bool join_requested();        // client : -e33join=1
 bool joined();                // client : instantané chargé et monde prêt
