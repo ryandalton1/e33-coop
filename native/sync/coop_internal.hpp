@@ -321,6 +321,8 @@ struct State {
     uint32_t next_battle_id = 1;
     std::map<std::string, uint8_t> owner_overrides;        // -e33owners=0:1,Lune:1  (emplacement ou nom : joueur)
     DWORD game_thread = 0;
+    bool scene_wait_logged = false;
+    std::optional<std::pair<uint8_t, proto::BattleStart>> roam_request;   // fork, hôte : demande reçue pendant une scène                        // fork : combat en attente de la fin d'une scène ici
     std::optional<proto::BattleStart> pending_start;       // client : combat de l'hôte, lancé une fois le monde prêt
     std::optional<proto::BattleStart> last_start;          // client : dernier BattleStart (le StartBattle local peut suivre son lancement)
     std::optional<proto::BattleStart> early_start;         // client : avis précoce de l'hôte (battle_id 0)
@@ -574,6 +576,8 @@ void lane_full_team_dead(bool& result);
 void lane_check_end(bool pre);
 void lane_is_battle_ending(bool& result);
 void lane_tick();
+void host_battle_request(uint8_t player, const proto::BattleStart& rq);
+void roam_request_tick();   // fork : demande de combat mise en file pendant une scène de l'hôte
 void lane_host_heroes(const proto::HeroStatus& h);
 void apply_host_party(const proto::BattleStart& bs);
 UObject* timeline_hero(UObject* timeline);

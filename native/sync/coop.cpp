@@ -563,6 +563,34 @@ void reject(Peer& p, proto::RejectReason reason, const std::string& detail)
     log().write("session_reject", JsonObj().add("peer", p.link->peer()).add("reason", static_cast<int>(reason)).add("detail", detail));
 }
 
+
+// Demande de combat d'un client (BattleStart sans n°, D34) : le même ennemi est lancé ici ; l'avis précoce et le
+// BattleStart partent ensuite comme pour un combat de l'hôte. Fork : en exploration libre, aussi depuis la file
+// (demande reçue pendant une scène de l'hôte, roam_request_tick).
+void host_battle_request(uint8_t player, const proto::BattleStart& rq)
+{
+    std::string why, err;
+    UObject* enemy = nullptr;
+    if (s.battle.active || game::in_battle()) why = "in_battle";   // exploration libre : premier arrivé, premier servi
+    else if (!game::explore_pawn() || game::map_change_in_progress()) why = "not_ready";
+    else if (enemy = game::find_world_enemy(rq.world_enemy); enemy) { if (!game::start_world_battle(enemy, L"", rq.engage, err)) why = "start_failed: " + err; }
+    // Fork, exploration libre : l'hôte est ailleurs (autre zone) : la rencontre est lancée par son nom.
+    else if (explore::roam() && !rq.encounter.empty()) { if (!game::trigger_battle(ue::from_utf8(rq.encounter), party_wide(game::party_names()), err)) why = "trigger_failed: " + err; }
+    else why = "enemy_not_found";
+    bump(why.empty() ? "battle_requests_started" : "battle_requests_refused");
+    log().write("coop_battle_request_received", JsonObj().add("player", static_cast<int>(player)).add("enemy", rq.world_enemy)
+                                                    .add("engage", static_cast<int>(rq.engage)).add("started", why.empty()).add("why", why));
+}
+
+// Fork : demande mise en file pendant une scène de l'hôte, lancée à sa fin.
+void roam_request_tick()
+{
+    if (!s.roam_request || game::playing_cinematic() || game::in_dialogue()) return;
+    auto [player, rq] = *s.roam_request;
+    s.roam_request.reset();
+    host_battle_request(player, rq);
+}
+
 void handle(Peer& p, proto::Message& m)
 {
     if (s.role == Role::Host) {
@@ -616,18 +644,19 @@ void handle(Peer& p, proto::Message& m)
         // Demande de combat du client meneur (BattleStart sans n°, D34) : le même ennemi est lancé ici ; l'avis précoce
         // et le BattleStart partent ensuite comme pour un combat de l'hôte.
         if (auto* rq = std::get_if<proto::BattleStart>(&m); rq && rq->battle_id == 0) {
-            std::string why, err;
-            UObject* enemy = nullptr;
-            if (p.player_id != explore::pilot() && !explore::roam()) why = "not_pilot";
-            else if (s.battle.active || game::in_battle()) why = "in_battle";   // exploration libre : premier arrivé, premier servi
-            else if (!game::explore_pawn() || game::map_change_in_progress()) why = "not_ready";
-            else if (enemy = game::find_world_enemy(rq->world_enemy); enemy) { if (!game::start_world_battle(enemy, L"", rq->engage, err)) why = "start_failed: " + err; }
-            // Fork, exploration libre : l'hôte est ailleurs (autre zone) : la rencontre est lancée par son nom.
-            else if (explore::roam() && !rq->encounter.empty()) { if (!game::trigger_battle(ue::from_utf8(rq->encounter), party_wide(game::party_names()), err)) why = "trigger_failed: " + err; }
-            else why = "enemy_not_found";
-            bump(why.empty() ? "battle_requests_started" : "battle_requests_refused");
-            log().write("coop_battle_request_received", JsonObj().add("player", static_cast<int>(p.player_id)).add("enemy", rq->world_enemy)
-                                                            .add("engage", static_cast<int>(rq->engage)).add("started", why.empty()).add("why", why));
+            if (p.player_id != explore::pilot() && !explore::roam()) {
+                bump("battle_requests_refused");
+                log().write("coop_battle_request_received", JsonObj().add("player", static_cast<int>(p.player_id)).add("started", false).add("why", "not_pilot"));
+                return;
+            }
+            // Fork, exploration libre : hôte dans une cinématique ou un dialogue : la demande attend sa fin (roam_request_tick).
+            if (explore::roam() && (game::playing_cinematic() || game::in_dialogue())) {
+                s.roam_request = std::make_pair(p.player_id, *rq);
+                bump("battle_requests_queued_scene");
+                log().write("coop_battle_request_queued", JsonObj().add("player", static_cast<int>(p.player_id)).add("enemy", rq->world_enemy).add("why", "host_scene"));
+                return;
+            }
+            host_battle_request(p.player_id, *rq);
             return;
         }
         if (builds::handle(p.player_id, m)) return;

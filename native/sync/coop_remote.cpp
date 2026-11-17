@@ -37,6 +37,15 @@ void start_pending_battle()
         return;
     }
     if (s.menu_wait_logged) { s.menu_wait_logged = false; ui::clear_status("battle_menu"); }
+    // Fork, exploration libre : cinématique ou dialogue en cours ici (le sien) : le combat attend sa fin (le lancer
+    // dedans couperait la scène ; les autres attendent notre premier tour, sans limite).
+    if (explore::roam() && (game::playing_cinematic() || game::in_dialogue())) {
+        ui::set_status("battle_scene", "battle_finish_scene");
+        if (!s.scene_wait_logged) { s.scene_wait_logged = true; bump("battle_starts_waiting_scene"); log().write("coop_battle_wait_scene", JsonObj()); }
+        s.world_ready_s = 0;
+        return;
+    }
+    if (s.scene_wait_logged) { s.scene_wait_logged = false; ui::clear_status("battle_scene"); }
     s.world_ready_s = ready ? s.world_ready_s + kStep : 0;
     // Combat déjà engagé ici (notre pion a suivi le pilote) : le monde est chargé et le jeu donne déjà la main au
     // joueur. Attendre 5 s de plus laissait le mod inactif pendant que le joueur agissait (essai du 2026-10-25, 01:11 :

@@ -50,6 +50,7 @@ constexpr Entry kTexts[] = {
     {"roam_gather", "Scène de l'histoire : vous rejoignez {0}", "Story scene: joining {0}"},
     {"turn_timer", "Tour de {0} : {1} s", "{0}'s turn: {1} s"},
     {"battle_close_menu", "Combat lancé : fermez le menu pour le rejoindre", "Battle started: close the menu to join it"},
+    {"battle_finish_scene", "Combat lancé : il vous attend à la fin de la scène", "Battle started: it waits for your scene to end"},
     {"duo_parry", "Parade en duo ! +{1} PA ({0})", "Duo parry! +{1} AP ({0})"},
     {"turn_forced", "Temps écoulé : {0} attaque automatiquement", "Time is up: {0} attacks automatically"},
     {"pilot_at_merchant", "Le meneur est chez le marchand : ses achats arrivent chez vous", "The leader is at the merchant: their purchases reach you"},
