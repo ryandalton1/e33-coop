@@ -12,7 +12,7 @@ param(
 )
 $ErrorActionPreference = "Stop"
 $repo = (Resolve-Path "$PSScriptRoot\..\..").Path
-if (-not $Ue4ssDir) { $Ue4ssDir = Join-Path $repo ".tools\dl\ue4ss-1181\std" }
+if (-not $Ue4ssDir) { $Ue4ssDir = Join-Path $PSScriptRoot "ue4ss-std" }   # fork: UE4SS 1181 config + standard Lua mods, kept in the repo
 if (-not $Out) { $Out = Join-Path $repo ".tools\e33lanes-player.zip" }
 $version = (Get-Content (Join-Path $repo "VERSION") -Raw).Trim()
 $stage = Join-Path ([IO.Path]::GetTempPath()) ("e33lanes-pkg-" + [guid]::NewGuid().ToString("N"))
